@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -8,6 +9,8 @@
 <meta name="theme-color" content="#2D7A4F">
 <title>明天吃啥好 · Tomorrow's Menu</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   :root {
@@ -775,7 +778,8 @@
       ↻ Curate Again
     </button>
     <div class="lock-hint" id="lockHint" style="display:none;">— Tap pin to lock a dish —</div>
-    <button onclick="shareMenu()" style="margin-top:10px;width:100%;padding:11px;background:transparent;border:1px solid rgba(184,149,106,.5);border-radius:8px;color:#D9B988;font-size:12px;letter-spacing:2px;cursor:pointer;font-family:inherit;">📤 SHARE · 分享给家人</button>
+    <button onclick="shareRoomMenu()" style="margin-top:10px;width:100%;padding:11px;background:linear-gradient(135deg,#16A34A,#22C55E);border:0;border-radius:8px;color:#fff;font-size:13px;font-weight:600;letter-spacing:2px;cursor:pointer;font-family:inherit;">🟢 实时共享菜单（Firebase）</button>
+    <button onclick="shareMenu()" style="margin-top:6px;width:100%;padding:9px;background:transparent;border:1px solid rgba(184,149,106,.3);border-radius:8px;color:rgba(217,185,136,.7);font-size:11px;letter-spacing:1px;cursor:pointer;font-family:inherit;">📤 只发链接（不实时同步）</button>
   </div>
 
   <div class="section-title">
@@ -1923,6 +1927,208 @@ const DISHES = [
 ];
 
 /* =========================================================
+ *  Firebase 实时同步
+ * ========================================================= */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBK166g6tKMAACSX5I5TH4uM_S9xP90Oi0",
+  authDomain: "menu-sync-91ccb.firebaseapp.com",
+  databaseURL: "https://menu-sync-91ccb-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "menu-sync-91ccb",
+  storageBucket: "menu-sync-91ccb.firebasestorage.app",
+  messagingSenderId: "443946867185",
+  appId: "1:443946867185:web:6378b18e8b92534ca4cc50"
+};
+
+const SYNC = {
+  db: null,
+  roomRef: null,
+  roomId: null,
+  applyingRemote: false,  // 防止收到更新又推送回去造成死循环
+  myId: 'u_' + Math.random().toString(36).substring(2, 8),
+  myName: '',
+  pushTimer: null,
+  online: false
+};
+
+function initFirebase() {
+  if (typeof firebase === 'undefined') {
+    console.warn('Firebase SDK 未加载');
+    return false;
+  }
+  try {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    SYNC.db = firebase.database();
+    SYNC.online = true;
+    return true;
+  } catch (e) {
+    console.error('Firebase 初始化失败:', e);
+    return false;
+  }
+}
+
+function genRoomId() {
+  return Math.random().toString(36).substring(2, 8);
+}
+
+function joinRoom(roomId, myName) {
+  if (!SYNC.db) return false;
+  // 离开旧房间
+  if (SYNC.roomRef) SYNC.roomRef.off();
+  SYNC.roomId = roomId;
+  SYNC.myName = myName || ('用户' + SYNC.myId.substring(2,5));
+  SYNC.roomRef = SYNC.db.ref('rooms/' + roomId);
+
+  // 监听整个房间状态变化
+  SYNC.roomRef.child('state').on('value', snap => {
+    const data = snap.val();
+    if (!data) return;
+    if (data.by === SYNC.myId) return; // 自己刚推送的，忽略
+    SYNC.applyingRemote = true;
+    applyRemoteState(data);
+    SYNC.applyingRemote = false;
+  });
+
+  // 注册自己到房间
+  const userRef = SYNC.roomRef.child('users/' + SYNC.myId);
+  userRef.set({
+    name: SYNC.myName,
+    joinedAt: firebase.database.ServerValue.TIMESTAMP
+  });
+  userRef.onDisconnect().remove();
+
+  // 监听在线人数
+  SYNC.roomRef.child('users').on('value', snap => {
+    const users = snap.val() || {};
+    updateOnlineBadge(Object.keys(users).length, users);
+  });
+
+  showRoomBadge(roomId);
+  return true;
+}
+
+function leaveRoom() {
+  if (SYNC.roomRef) {
+    SYNC.roomRef.off();
+    if (SYNC.myId) SYNC.roomRef.child('users/' + SYNC.myId).remove();
+    SYNC.roomRef = null;
+    SYNC.roomId = null;
+  }
+  hideRoomBadge();
+}
+
+function applyRemoteState(data) {
+  if (data.current) {
+    STATE.current = data.current.map(id => DISHES.find(x => x.id === id)).filter(Boolean);
+  }
+  if (data.lockedIds) STATE.lockedIds = new Set(data.lockedIds);
+  if (data.preset) STATE.preset = data.preset;
+  if (typeof data.numDishes === 'number') STATE.numDishes = data.numDishes;
+  if (typeof data.numSoups === 'number') STATE.numSoups = data.numSoups;
+  if (typeof data.wantDessert === 'boolean') STATE.wantDessert = data.wantDessert;
+  renderRec();
+  syncUiFromState();
+}
+
+function syncUiFromState() {
+  document.querySelectorAll('.preset-chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.preset === STATE.preset);
+  });
+  document.querySelectorAll('.combo-col-chips').forEach(group => {
+    const key = group.dataset.key;
+    const v = (key === 'wantDessert') ? (STATE.wantDessert ? 1 : 0) : STATE[key];
+    group.querySelectorAll('.cc-chip').forEach(c => {
+      c.classList.toggle('active', parseInt(c.dataset.v) === v);
+    });
+  });
+}
+
+function pushStateToRoom() {
+  if (!SYNC.roomRef || SYNC.applyingRemote) return;
+  // 节流：500ms 内多次修改只推送一次
+  clearTimeout(SYNC.pushTimer);
+  SYNC.pushTimer = setTimeout(() => {
+    SYNC.roomRef.child('state').set({
+      current: STATE.current.map(d => d.id),
+      lockedIds: [...STATE.lockedIds],
+      preset: STATE.preset,
+      numDishes: STATE.numDishes,
+      numSoups: STATE.numSoups,
+      wantDessert: STATE.wantDessert,
+      by: SYNC.myId,
+      byName: SYNC.myName,
+      at: firebase.database.ServerValue.TIMESTAMP
+    });
+  }, 500);
+}
+
+function showRoomBadge(roomId) {
+  let badge = document.getElementById('roomBadge');
+  if (!badge) {
+    badge = document.createElement('div');
+    badge.id = 'roomBadge';
+    badge.style.cssText = 'position:fixed;top:0;left:50%;transform:translateX(-50%);max-width:460px;width:100%;background:linear-gradient(135deg,#1C1F2E,#2A2F42);color:#D9B988;padding:10px 16px;z-index:999;box-shadow:0 4px 16px rgba(0,0,0,.2);font-size:13px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;';
+    badge.onclick = showRoomShareModal;
+    document.body.appendChild(badge);
+  }
+  badge.innerHTML = `<span><span style="display:inline-block;width:8px;height:8px;background:#4ADE80;border-radius:50%;margin-right:8px;animation:pulse 2s infinite;"></span>实时共享中 · 房间 <strong style="color:#fff;">${roomId}</strong></span><span id="onlineCount" style="color:#D9B988;">👥 1</span>`;
+  // 给 body 加 padding 防遮挡
+  document.body.style.paddingTop = '42px';
+}
+function hideRoomBadge() {
+  const b = document.getElementById('roomBadge');
+  if (b) b.remove();
+  document.body.style.paddingTop = '';
+}
+function updateOnlineBadge(count, users) {
+  const el = document.getElementById('onlineCount');
+  if (!el) return;
+  const names = Object.values(users).map(u=>u.name).join('、');
+  el.textContent = '👥 ' + count;
+  el.title = '在线: ' + names;
+}
+
+/* 创建/分享房间 */
+function shareRoomMenu() {
+  if (!SYNC.db) {
+    toast('网络未连接，无法创建房间');
+    return;
+  }
+  const name = prompt('请输入你的名字（让对方知道是谁的菜单）:', SYNC.myName || '') || '我';
+  SYNC.myName = name;
+  let roomId = SYNC.roomId;
+  if (!roomId) {
+    roomId = genRoomId();
+    joinRoom(roomId, name);
+    setTimeout(pushStateToRoom, 300);
+  }
+  showRoomShareModal();
+}
+
+function showRoomShareModal() {
+  const roomId = SYNC.roomId;
+  if (!roomId) return;
+  const baseUrl = window.location.origin + window.location.pathname;
+  const url = baseUrl + '?room=' + roomId;
+  if (navigator.clipboard) navigator.clipboard.writeText(url).catch(()=>{});
+  const o = document.createElement('div');
+  o.id = 'roomShareModal';
+  o.style.cssText = 'position:fixed;inset:0;background:rgba(28,31,46,.7);z-index:1001;display:flex;align-items:center;justify-content:center;padding:20px;';
+  o.innerHTML = `
+    <div style="background:#FAF8F2;border-radius:14px;padding:24px;max-width:380px;width:100%;border-top:3px solid #4ADE80;">
+      <div style="color:#16A34A;letter-spacing:3px;font-size:11px;text-transform:uppercase;text-align:center;margin-bottom:8px;">— LIVE SYNC · 实时共享 —</div>
+      <div style="font-family:Georgia,serif;font-style:italic;font-size:22px;color:#1C1F2E;text-align:center;margin-bottom:14px;">房间号 <strong style="color:#16A34A;">${roomId}</strong></div>
+      <div style="background:white;border:1px solid #E8E3D5;border-radius:8px;padding:10px 12px;font-size:12px;color:#5E5E5E;word-break:break-all;margin-bottom:14px;font-family:monospace;">${url}</div>
+      <div style="background:#ECFDF5;border-left:3px solid #4ADE80;padding:12px;font-size:13px;color:#15803D;line-height:1.8;margin-bottom:14px;">
+        ✓ 链接已复制 · 发微信给老公<br>
+        他点开后<strong>你们任何一方选/锁/抽菜，对方都能实时看到</strong>
+      </div>
+      <button onclick="document.getElementById('roomShareModal').remove()" style="width:100%;padding:13px;border:0;border-radius:8px;background:#1C1F2E;color:#D9B988;font-size:14px;font-weight:500;letter-spacing:2px;cursor:pointer;">关闭</button>
+    </div>
+  `;
+  document.body.appendChild(o);
+}
+
+/* =========================================================
  *  全局状态
  * ========================================================= */
 const STATE = {
@@ -2052,6 +2258,95 @@ function showShareModal(url, count, fromName) {
 function closeShareModal() {
   const o = document.getElementById('shareModalOverlay');
   if (o) o.remove();
+}
+
+function showAiSettings() {
+  const cacheCount = Object.keys(AI_CONFIG.imageCache).length;
+  const o = document.createElement('div');
+  o.style.cssText = 'position:fixed;inset:0;background:rgba(28,31,46,.85);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;';
+  o.id = 'aiSettingsOverlay';
+  o.innerHTML = `
+    <div style="background:#FAF8F2;border-radius:14px;padding:24px;max-width:440px;width:100%;max-height:90vh;overflow-y:auto;border-top:3px solid #B8956A;">
+      <div style="color:#B8956A;letter-spacing:3px;font-size:11px;text-transform:uppercase;text-align:center;margin-bottom:6px;">— AI IMAGE · 图像生成设置 —</div>
+      <div style="font-family:Georgia,serif;font-style:italic;font-size:22px;color:#1C1F2E;text-align:center;margin-bottom:18px;">配置你的中转 API</div>
+
+      <div style="background:#FFF8EC;border-left:3px solid #B8956A;padding:12px 14px;font-size:12px;color:#8B6F2A;line-height:1.7;margin-bottom:18px;">
+        💡 填写中转 API 的地址和 Key，将用真实 AI 模型为你的菜单生成高清图片。<br>
+        生成的图片**缓存在你的浏览器**，下次免费用。
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <label style="font-size:12px;color:#5E5E5E;display:block;margin-bottom:4px;">API URL <span style="color:#A91D2C;">*</span></label>
+        <input id="aiUrl" type="text" placeholder="https://api.example.com 或 https://api.example.com/v1" value="${AI_CONFIG.apiUrl||''}"
+               style="width:100%;padding:10px 12px;border:1px solid #C7A769;border-radius:6px;font-size:13px;background:#fff;font-family:monospace;" />
+        <div style="font-size:10px;color:#9B9B95;margin-top:3px;">填中转服务的根地址，自动补 /v1/images/generations</div>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <label style="font-size:12px;color:#5E5E5E;display:block;margin-bottom:4px;">API Key <span style="color:#A91D2C;">*</span></label>
+        <input id="aiKey" type="password" placeholder="sk-..." value="${AI_CONFIG.apiKey||''}"
+               style="width:100%;padding:10px 12px;border:1px solid #C7A769;border-radius:6px;font-size:13px;background:#fff;font-family:monospace;" />
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:10px;margin-bottom:14px;">
+        <div>
+          <label style="font-size:12px;color:#5E5E5E;display:block;margin-bottom:4px;">模型名称</label>
+          <input id="aiModel" type="text" placeholder="dall-e-3" value="${AI_CONFIG.model||'dall-e-3'}"
+                 style="width:100%;padding:10px 12px;border:1px solid #C7A769;border-radius:6px;font-size:13px;background:#fff;font-family:monospace;" />
+        </div>
+        <div>
+          <label style="font-size:12px;color:#5E5E5E;display:block;margin-bottom:4px;">尺寸</label>
+          <select id="aiSize" style="width:100%;padding:10px 12px;border:1px solid #C7A769;border-radius:6px;font-size:13px;background:#fff;">
+            <option ${AI_CONFIG.size==='256x256'?'selected':''}>256x256</option>
+            <option ${(AI_CONFIG.size==='512x512'||!AI_CONFIG.size)?'selected':''}>512x512</option>
+            <option ${AI_CONFIG.size==='1024x1024'?'selected':''}>1024x1024</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="background:#F2EEE3;padding:10px 12px;border-radius:6px;font-size:12px;color:#5E5E5E;margin-bottom:14px;line-height:1.7;">
+        📦 已缓存图片：<strong style="color:#1C1F2E;">${cacheCount}</strong> 张 ·
+        <span onclick="clearImageCache();closeAiSettings();" style="color:#A91D2C;cursor:pointer;text-decoration:underline;">清空缓存</span>
+      </div>
+
+      <div style="background:#FFF8EC;padding:10px 12px;border-radius:6px;font-size:11px;color:#8B6F2A;margin-bottom:18px;line-height:1.6;">
+        <strong>常见模型名：</strong>
+        dall-e-3 / dall-e-2 / flux / sd3 / midjourney<br>
+        <strong>常见中转 API：</strong>
+        agicto / openai-sb / api2d / aiproxy 等
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <button onclick="saveAiSettingsFromInputs()" style="padding:13px;border:0;border-radius:8px;background:#1C1F2E;color:#D9B988;font-size:14px;font-weight:500;letter-spacing:1px;cursor:pointer;">💾 保存</button>
+        <button onclick="testAndClose()" style="padding:13px;border:1px solid #B8956A;border-radius:8px;background:transparent;color:#B8956A;font-size:14px;font-weight:500;cursor:pointer;">🔌 测试连接</button>
+      </div>
+      <button onclick="closeAiSettings()" style="margin-top:8px;width:100%;padding:10px;border:1px solid #E8E3D5;border-radius:8px;background:transparent;color:#5E5E5E;font-size:12px;cursor:pointer;">取消</button>
+    </div>
+  `;
+  document.body.appendChild(o);
+}
+function closeAiSettings() {
+  const o = document.getElementById('aiSettingsOverlay');
+  if (o) o.remove();
+}
+function saveAiSettingsFromInputs() {
+  AI_CONFIG.apiUrl = document.getElementById('aiUrl').value.trim();
+  AI_CONFIG.apiKey = document.getElementById('aiKey').value.trim();
+  AI_CONFIG.model = document.getElementById('aiModel').value.trim() || 'dall-e-3';
+  AI_CONFIG.size = document.getElementById('aiSize').value;
+  saveAiConfig();
+  toast('✓ 设置已保存');
+  closeAiSettings();
+}
+async function testAndClose() {
+  AI_CONFIG.apiUrl = document.getElementById('aiUrl').value.trim();
+  AI_CONFIG.apiKey = document.getElementById('aiKey').value.trim();
+  AI_CONFIG.model = document.getElementById('aiModel').value.trim() || 'dall-e-3';
+  AI_CONFIG.size = document.getElementById('aiSize').value;
+  const ok = await testAiConnection();
+  if (ok) {
+    saveAiConfig();
+  }
 }
 
 function showDeployGuide() {
@@ -2244,6 +2539,7 @@ function rerollAll() {
   });
   if (STATE.history.length > 30) STATE.history = STATE.history.slice(0,30);
   saveState();
+  pushStateToRoom();
 }
 
 function onRerollClick() {
@@ -2261,6 +2557,7 @@ function toggleLock(dishId, ev) {
   if (STATE.lockedIds.has(dishId)) STATE.lockedIds.delete(dishId);
   else STATE.lockedIds.add(dishId);
   renderRec();
+  pushStateToRoom();
 }
 
 function renderRec() {
@@ -2355,14 +2652,17 @@ function showExportPreview(dishes) {
       <span style="cursor:pointer;font-size:22px;line-height:1;" onclick="closeExportPreview()">×</span>
     </div>
     <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#666;padding:20px;">
-      <div id="menuImageTarget" style="background:#EFE8D4;padding:32px 24px;max-width:640px;margin:0 auto;box-shadow:0 8px 32px rgba(0,0,0,.3);">
-        <div style="background:#FAF8F2;border-radius:8px;overflow:hidden;">
+      <div id="menuImageTarget" style="background:#F2E4C0;max-width:680px;margin:0 auto;box-shadow:0 8px 32px rgba(0,0,0,.3);border:8px solid #8B2C2C;">
+        <div style="border:1px solid #FAEBC8;">
           ${previewHTML}
         </div>
-        <div style="text-align:center;color:#B8956A;font-size:10px;letter-spacing:3px;margin-top:18px;text-transform:uppercase;">— 明日厨 · Demain Menu —</div>
       </div>
     </div>
-    <div style="padding:14px 16px;background:#1C1F2E;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-bottom:max(14px,env(safe-area-inset-bottom));">
+    <div style="padding:10px 16px 6px;background:#1C1F2E;display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+      <button onclick="showAiSettings()" style="padding:9px;border:1px solid rgba(184,149,106,.4);border-radius:6px;background:transparent;color:#B8956A;font-size:11px;cursor:pointer;letter-spacing:1px;">⚙️ AI 图片设置</button>
+      <button onclick="genAllImagesAndRefresh()" style="padding:9px;border:1px solid rgba(184,149,106,.4);border-radius:6px;background:transparent;color:#B8956A;font-size:11px;cursor:pointer;letter-spacing:1px;">🎨 用 AI 生菜品图</button>
+    </div>
+    <div style="padding:8px 16px;background:#1C1F2E;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-bottom:max(14px,env(safe-area-inset-bottom));">
       <button onclick="exportAsImage()" style="padding:14px;border:0;border-radius:8px;background:#B8956A;color:#1C1F2E;font-weight:600;font-size:14px;cursor:pointer;letter-spacing:1px;">📷 保存图片(发微信)</button>
       <button onclick="exportAsText()" style="padding:14px;border:1px solid #B8956A;border-radius:8px;background:transparent;color:#D9B988;font-weight:500;font-size:14px;cursor:pointer;letter-spacing:1px;">📋 复制文本</button>
     </div>
@@ -2378,6 +2678,19 @@ function closeExportPreview() {
   const o = document.getElementById('exportOverlay');
   if (o) o.remove();
   document.body.style.overflow = '';
+}
+
+async function genAllImagesAndRefresh() {
+  if (!AI_CONFIG.apiKey || !AI_CONFIG.apiUrl) {
+    toast('请先在 ⚙️ AI 图片设置 里配置 API');
+    showAiSettings();
+    return;
+  }
+  const dishes = STATE.current;
+  await preGenerateImages(dishes);
+  // 重新渲染预览
+  closeExportPreview();
+  setTimeout(() => showExportPreview(dishes), 100);
 }
 
 async function exportAsImage() {
@@ -2463,126 +2776,295 @@ function exportAsText() {
   }
 }
 
-function dishPhotoUrl(d) {
-  // 基于菜名+主料关键词构造 Unsplash 图库链接（加载失败会fallback到emoji）
-  const kw = [];
-  if (d.cuisine === 'canton') kw.push('cantonese');
-  else if (d.cuisine === 'jiangzhe') kw.push('shanghai');
-  else if (d.cuisine === 'chaoshan') kw.push('teochew');
-  else if (d.cuisine === 'fujian') kw.push('fujian');
-  else if (d.cuisine === 'hunan') kw.push('hunan');
-  if (d.cat === '汤') kw.push('soup');
-  else if (d.cat === '甜品') kw.push('dessert');
-  else if (d.cat === '凉菜') kw.push('appetizer');
-  else if (/虾/.test(d.name)) kw.push('shrimp');
-  else if (/鱼|鲈|鲫|黄|鳕|三文/.test(d.name)) kw.push('fish');
-  else if (/牛/.test(d.name)) kw.push('beef');
-  else if (/鸡|鸭|凤/.test(d.name)) kw.push('chicken');
-  else if (/猪|肉|五花|排骨|腩|肘|蹄/.test(d.name)) kw.push('pork');
-  else if (/蛋/.test(d.name)) kw.push('egg');
-  else if (/豆腐/.test(d.name)) kw.push('tofu');
-  else if (/面|饭|粥|粿条/.test(d.name)) kw.push('noodles');
-  else if (/菜|笋|藕|瓜|茄|薯|玉米/.test(d.name)) kw.push('vegetable');
-  kw.push('chinese');
-  kw.push('food');
-  // 用 dish id 做 seed 保证同一道菜每次刷新得到相同图片
-  return `https://source.unsplash.com/200x200/?${kw.join(',')}&sig=${d.id}`;
+/* ============ AI 图像生成配置 ============ */
+const AI_CONFIG = {
+  apiUrl: '',
+  apiKey: '',
+  model: 'dall-e-3',
+  size: '512x512',
+  imageCache: {} // {dishId: imageUrl or base64}
+};
+
+function loadAiConfig() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('aiConfig_v1') || '{}');
+    Object.assign(AI_CONFIG, saved);
+  } catch(e){}
+}
+function saveAiConfig() {
+  localStorage.setItem('aiConfig_v1', JSON.stringify(AI_CONFIG));
 }
 
-function dishPhotoBlock(d, size) {
+async function callImageApi(prompt) {
+  if (!AI_CONFIG.apiUrl || !AI_CONFIG.apiKey) throw new Error('未配置API');
+  // 自动补全 URL 路径
+  let url = AI_CONFIG.apiUrl.trim().replace(/\/$/, '');
+  if (!url.endsWith('/images/generations')) {
+    if (!url.endsWith('/v1')) url += '/v1';
+    url += '/images/generations';
+  }
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + AI_CONFIG.apiKey
+    },
+    body: JSON.stringify({
+      model: AI_CONFIG.model,
+      prompt: prompt,
+      n: 1,
+      size: AI_CONFIG.size
+    })
+  });
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error('API错误 ' + response.status + ': ' + errText.substring(0, 100));
+  }
+  const data = await response.json();
+  const item = data.data?.[0];
+  if (!item) throw new Error('返回数据格式异常');
+  if (item.url) return item.url;
+  if (item.b64_json) return 'data:image/png;base64,' + item.b64_json;
+  throw new Error('未找到图片URL');
+}
+
+async function generateDishImage(d) {
+  if (AI_CONFIG.imageCache[d.id]) return AI_CONFIG.imageCache[d.id];
+  if (!AI_CONFIG.apiKey || !AI_CONFIG.apiUrl) return null;
+  const prompt = `${d.name}, chinese cuisine, top view, on a white ceramic plate, professional food photography, soft natural light, appetizing, high detail, no text, no watermark`;
+  try {
+    const url = await callImageApi(prompt);
+    AI_CONFIG.imageCache[d.id] = url;
+    saveAiConfig();
+    return url;
+  } catch (e) {
+    console.error('图片生成失败', d.name, e);
+    return null;
+  }
+}
+
+async function preGenerateImages(dishes) {
+  if (!AI_CONFIG.apiKey || !AI_CONFIG.apiUrl) return;
+  const toGenerate = dishes.filter(d => !AI_CONFIG.imageCache[d.id]);
+  if (toGenerate.length === 0) {
+    toast('✓ 所有图片已缓存');
+    return;
+  }
+  for (let i = 0; i < toGenerate.length; i++) {
+    const d = toGenerate[i];
+    toast(`正在生成 ${i+1}/${toGenerate.length}: ${d.name}`);
+    await generateDishImage(d);
+  }
+  toast('✓ 全部图片已生成');
+}
+
+async function testAiConnection() {
+  if (!AI_CONFIG.apiUrl || !AI_CONFIG.apiKey) {
+    toast('请先填写 URL 和 Key');
+    return;
+  }
+  toast('正在测试连接...');
+  try {
+    const url = await callImageApi('a red apple, simple, white background');
+    toast('✓ 连接成功！可以正常生图');
+    return true;
+  } catch (e) {
+    toast('✗ ' + e.message);
+    return false;
+  }
+}
+
+function clearImageCache() {
+  if (!confirm('确定清空所有缓存图片？下次导出会重新调用 API 消耗额度')) return;
+  AI_CONFIG.imageCache = {};
+  saveAiConfig();
+  toast('✓ 缓存已清空');
+}
+
+function dishPhotoUrl(d) {
+  // 优先用用户AI生成的缓存
+  if (AI_CONFIG.imageCache[d.id]) return AI_CONFIG.imageCache[d.id];
+  // 兜底：免费 Pollinations.ai
+  const prompt = encodeURIComponent(`${d.name}, chinese cuisine, top view, on a white ceramic plate, professional food photography, soft natural light, appetizing, high detail`);
+  return `https://image.pollinations.ai/prompt/${prompt}?width=400&height=400&seed=${d.id}&nologo=true&model=flux`;
+}
+
+function dishPhotoBlock(d, size, showName) {
   const grad = ({纯荤:'linear-gradient(135deg,#FFE3CB,#F0B98A)',荤素:'linear-gradient(135deg,#FFF1C2,#E8C470)',纯素:'linear-gradient(135deg,#D8EEC0,#98C566)',凉菜:'linear-gradient(135deg,#E8F4DD,#B5D685)',汤:'linear-gradient(135deg,#D2E8F4,#7AAFD6)',甜品:'linear-gradient(135deg,#F4D2E8,#D67AAB)'})[d.cat]||'#FAF8F2';
-  const emojiSize = Math.floor(size * 0.55);
-  return `<div style="width:${size}px;height:${size}px;border-radius:${Math.floor(size*0.2)}px;background:${grad};display:flex;align-items:center;justify-content:center;font-size:${emojiSize}px;flex-shrink:0;overflow:hidden;position:relative;box-shadow:0 3px 10px rgba(0,0,0,0.08);">
+  const emojiSize = Math.floor(size * 0.5);
+  const nameSize = size >= 90 ? 14 : (size >= 70 ? 11 : 9);
+  const nameOverlay = (showName && size >= 70) ? `
+    <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(to top,rgba(28,31,46,0.85),rgba(28,31,46,0.5) 60%,transparent);color:#fff;text-align:center;padding:${size>=90?'14px 4px 6px':'10px 3px 4px'};font-size:${nameSize}px;font-weight:600;z-index:3;letter-spacing:0.5px;line-height:1.15;">${d.name}</div>
+  ` : '';
+  return `<div style="width:${size}px;height:${size}px;border-radius:${Math.floor(size*0.18)}px;background:${grad};display:flex;align-items:center;justify-content:center;font-size:${emojiSize}px;flex-shrink:0;overflow:hidden;position:relative;box-shadow:0 3px 10px rgba(0,0,0,0.1);">
     <img src="${dishPhotoUrl(d)}" crossorigin="anonymous" onerror="this.style.display='none'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" />
-    <span style="position:relative;z-index:2;mix-blend-mode:multiply;text-shadow:0 2px 4px rgba(255,255,255,0.5);">${d.icon}</span>
+    <span style="position:relative;z-index:2;text-shadow:0 2px 6px rgba(255,255,255,0.6);">${d.icon}</span>
+    ${nameOverlay}
   </div>`;
+}
+
+function dishDescription(d) {
+  // 自动生成菜品注解：从 tip 提取第一段+第二段，去掉技巧性文字
+  if (!d.tip) return d.cat + '·' + d.sub + '，用心烹制。';
+  let s = d.tip;
+  // 去掉"——"后面的解释
+  s = s.split('——')[0] || s;
+  // 取前几句
+  const parts = s.split(/[；;]/);
+  let result = parts.slice(0, 2).join('；');
+  if (result.length > 60) result = result.substring(0, 60) + '...';
+  if (!/[。！]$/.test(result)) result += '。';
+  return result;
 }
 
 function buildMenuImageHTML(dishes, merged, dateStr, wk) {
   const slotName = {meat:'主菜·荤',mix:'荤素搭配',veg:'时蔬',soup:'例汤',any:'菜品'};
   const css = `
-font-family: "PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
-color:#1C1F2E; line-height:1.7; padding:40px 36px;
+font-family: "Songti SC","STSong","SimSun","宋体",serif;
+color:#2C1810; line-height:1.7; padding:0;
+background:#F2E4C0;
+position:relative;
 `;
   return `
 <div style="${css}">
 
-  <div style="text-align:center; padding:16px 0 24px; border-bottom:2px solid #B8956A; margin-bottom:24px;">
-    <div style="color:#B8956A; letter-spacing:6px; font-size:11px; text-transform:uppercase; margin-bottom:10px;">— DAILY SELECTION · 每日精选 —</div>
-    <div style="font-family:Georgia,'Songti SC',serif; font-style:italic; font-size:36px; color:#1C1F2E; font-weight:500;">明日菜单</div>
-    <div style="color:#5E5E5E; font-size:13px; letter-spacing:3px; margin-top:10px;">${dateStr} · ${wk}</div>
-  </div>
-
-  <div style="color:#B8956A; letter-spacing:4px; font-size:12px; text-transform:uppercase; margin:24px 0 14px; border-bottom:1px solid #D9D2BE; padding-bottom:8px; font-weight:600;">— I. 今日菜单 · TODAY'S MENU —</div>
-  <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
-  ${dishes.map((d,i)=>`
-    <div style="background:#fff; border:1px solid #E8E3D5; border-radius:14px; padding:12px; display:flex; align-items:center; gap:12px;">
-      ${dishPhotoBlock(d, 64)}
-      <div style="flex:1; min-width:0;">
-        <div style="font-family:Georgia,'Songti SC',serif; font-style:italic; font-size:17px; color:#1C1F2E; font-weight:500; line-height:1.25;">${i+1}. ${d.name}</div>
-        <div style="color:#B8956A; font-size:10px; letter-spacing:1px; margin-top:4px;">${d.cat} · ${d.time}分钟</div>
-      </div>
+  <!-- 标题区 -->
+  <div style="padding:36px 30px 16px;position:relative;text-align:center;">
+    <!-- 左上梅花 -->
+    <svg width="100" height="70" style="position:absolute;left:18px;top:12px;" viewBox="0 0 100 70">
+      <path d="M 5 65 Q 25 50 40 35 Q 55 20 75 8" stroke="#6B4226" stroke-width="2.5" fill="none"/>
+      <g fill="#C0282E">
+        <circle cx="25" cy="48" r="6"/><circle cx="30" cy="42" r="5"/><circle cx="22" cy="42" r="5"/><circle cx="26" cy="38" r="5"/><circle cx="29" cy="51" r="4"/>
+        <circle cx="48" cy="28" r="6"/><circle cx="53" cy="22" r="5"/><circle cx="45" cy="22" r="5"/><circle cx="50" cy="18" r="5"/>
+        <circle cx="72" cy="12" r="5"/><circle cx="76" cy="8" r="4"/>
+      </g>
+      <g fill="#FCD7C2"><circle cx="26" cy="44" r="1.5"/><circle cx="49" cy="24" r="1.5"/><circle cx="73" cy="11" r="1.2"/></g>
+    </svg>
+    <!-- 右上远山亭子 -->
+    <svg width="120" height="70" style="position:absolute;right:18px;top:18px;opacity:0.6;" viewBox="0 0 120 70">
+      <path d="M 0 60 L 25 35 L 45 50 L 65 25 L 90 45 L 120 30 L 120 70 L 0 70 Z" fill="#9A8064"/>
+      <path d="M 30 38 L 50 53 L 70 28 L 95 48" stroke="#6B4226" stroke-width="0.8" fill="none"/>
+      <rect x="78" y="20" width="14" height="10" fill="#6B4226"/>
+      <path d="M 75 20 L 95 20 L 85 13 Z" fill="#8B2C2C"/>
+    </svg>
+    <h1 style="font-size:72px;font-weight:900;color:#3A1810;letter-spacing:16px;margin:18px 0 6px;font-family:'STSong','Songti SC',serif;text-shadow:0 2px 0 rgba(139,44,44,0.15);">菜 单</h1>
+    <div style="display:inline-block;color:#6B4226;letter-spacing:6px;font-size:14px;border-top:1px solid #8B6F4D;border-bottom:1px solid #8B6F4D;padding:6px 36px;margin-top:2px;">
+      <span style="color:#8B2C2C;">❀</span> 用心烹饪 · 味传经典 <span style="color:#8B2C2C;">❀</span>
     </div>
-  `).join('')}
+    <div style="margin-top:14px;color:#6B4226;font-size:12px;letter-spacing:3px;">${dateStr} · ${wk}</div>
   </div>
-  <div style="text-align:center; color:#5E5E5E; font-size:11px; margin-top:14px; letter-spacing:1px;">共 ${dishes.length} 道菜 · 总用时约 ${dishes.reduce((s,d)=>s+d.time,0)} 分钟</div>
 
-  <div style="color:#B8956A; letter-spacing:4px; font-size:12px; text-transform:uppercase; margin:32px 0 14px; border-bottom:1px solid #D9D2BE; padding-bottom:8px; font-weight:600;">— II. 大厨做法 · RECIPES —</div>
+  <!-- 表头 -->
+  <div style="margin:0 30px;background:#7B1F1F;color:#FAEBC8;display:grid;grid-template-columns:170px 200px 1fr;text-align:center;padding:12px 0;border-radius:3px 3px 0 0;">
+    <div style="font-size:15px;letter-spacing:6px;font-weight:600;border-right:1px solid rgba(250,235,200,0.3);">菜 品</div>
+    <div style="font-size:15px;letter-spacing:6px;font-weight:600;border-right:1px solid rgba(250,235,200,0.3);">菜 名</div>
+    <div style="font-size:15px;letter-spacing:6px;font-weight:600;">中文注解</div>
+  </div>
 
-  ${dishes.map((d,i)=>`
-    <div style="margin:28px 0 32px; padding-top:20px; border-top:2px solid #B8956A; page-break-inside:avoid;">
-      <div style="display:flex; align-items:center; gap:16px; margin-bottom:16px; background:linear-gradient(90deg, rgba(184,149,106,0.06) 0%, transparent 100%); padding:12px; border-radius:12px;">
-        ${dishPhotoBlock(d, 100)}
-        <div style="flex:1;">
-          <div style="font-family:Georgia,'Songti SC',serif; font-style:italic; font-size:28px; color:#1C1F2E; font-weight:500; line-height:1.15;">${i+1}. ${d.name}</div>
-          <div style="color:#B8956A; letter-spacing:2px; font-size:11px; text-transform:uppercase; margin-top:5px;">${d.cat} · ${d.sub} · 约 ${d.time} 分钟</div>
+  <!-- 菜品列表 -->
+  <div style="margin:0 30px;border:1px solid #8B6F4D;border-top:none;background:rgba(255,250,235,0.5);">
+    ${dishes.map((d,i)=>`
+      <div style="display:grid;grid-template-columns:170px 200px 1fr;align-items:center;padding:14px 12px;${i!==dishes.length-1?'border-bottom:1px solid #C7A769;':''}">
+        <div style="display:flex;justify-content:center;align-items:center;">
+          <div style="width:140px;height:140px;border-radius:8px;background:#FAEBC8;border:2px solid #8B6F4D;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;font-size:60px;box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+            <img src="${dishPhotoUrl(d)}" crossorigin="anonymous" onerror="this.style.display='none'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" />
+            <span style="position:relative;z-index:1;text-shadow:0 2px 4px rgba(255,255,255,0.6);">${d.icon}</span>
+          </div>
+        </div>
+        <div style="text-align:center;padding:0 6px;">
+          <div style="font-size:30px;font-weight:600;color:#3A1810;font-family:'STSong','Songti SC',serif;letter-spacing:4px;line-height:1.2;">${d.name}</div>
+          <div style="margin-top:8px;color:#8B6F4D;font-size:11px;letter-spacing:2px;display:flex;align-items:center;justify-content:center;gap:8px;">
+            <span style="display:inline-block;width:20px;height:1px;background:#C7A769;"></span>
+            ${d.time} 分钟
+            <span style="display:inline-block;width:20px;height:1px;background:#C7A769;"></span>
+          </div>
+        </div>
+        <div style="font-size:14px;line-height:1.95;color:#3C2418;padding-left:14px;padding-right:6px;font-family:'Songti SC',serif;">
+          ${dishDescription(d)}
         </div>
       </div>
-
-      <div style="color:#B8956A; letter-spacing:3px; font-size:12px; margin:18px 0 10px; font-weight:600;">🛒 食材准备</div>
-      <div style="background:#FAF8F2; padding:14px 16px; border-left:4px solid #B8956A; font-size:15px; line-height:1.9;">
-        ${d.ingredients.map(it=>`<span style="display:inline-block; margin-right:18px; color:#1C1F2E;">${it.n} <strong style="color:#B8956A;">${it.a}</strong></span>`).join('')}
-      </div>
-
-      <div style="color:#B8956A; letter-spacing:3px; font-size:12px; margin:20px 0 10px; font-weight:600;">👨‍🍳 做法步骤</div>
-      <ol style="list-style:none; padding:0; margin:0;">
-        ${d.steps.map((s,si)=>`
-          <li style="display:flex; gap:14px; padding:14px 0; border-bottom:1px dashed #E8E3D5;">
-            <div style="flex:0 0 36px; font-family:Georgia,serif; font-style:italic; font-size:24px; color:#B8956A; font-weight:500; line-height:1;">${String(si+1).padStart(2,'0')}</div>
-            <div style="flex:1; font-size:16px; line-height:1.8; color:#1C1F2E;">${decorateStep(s)}</div>
-          </li>
-        `).join('')}
-      </ol>
-
-      <div style="background:#1C1F2E; color:#F5EBD9; padding:16px 18px; margin-top:18px; border-radius:4px; border-left:4px solid #B8956A;">
-        <div style="color:#D9B988; font-family:Georgia,'Songti SC',serif; font-style:italic; font-size:16px; margin-bottom:8px;">💡 阿姨记住这几点</div>
-        <div style="font-size:14px; line-height:1.85;">${d.tip}</div>
-      </div>
-    </div>
-  `).join('')}
-
-  <div style="color:#B8956A; letter-spacing:4px; font-size:12px; text-transform:uppercase; margin:32px 0 14px; border-bottom:1px solid #D9D2BE; padding-bottom:8px; font-weight:600;">— III. 采购清单 · SHOPPING LIST —</div>
-  <div style="background:#FFF8EC; border-left:4px solid #B8956A; padding:10px 14px; margin-bottom:14px; font-size:12px; color:#8B6F2A;">
-    📌 买完一项就在 ☐ 里打勾，避免遗漏
-  </div>
-  <table style="width:100%; border-collapse:collapse; font-size:14px;">
-    <tr style="background:#1C1F2E; color:#B8956A;">
-      <th style="text-align:center; padding:10px 8px; width:32px; font-weight:normal; font-size:11px;">☐</th>
-      <th style="text-align:left; padding:10px 8px; font-weight:normal; font-size:11px;">食材</th>
-      <th style="text-align:left; padding:10px 8px; font-weight:normal; font-size:11px;">用量</th>
-      <th style="text-align:left; padding:10px 8px; font-weight:normal; font-size:11px;">用于哪道菜</th>
-    </tr>
-    ${Object.entries(merged).map(([n,info])=>`
-      <tr>
-        <td style="padding:10px 8px; text-align:center; border-bottom:1px solid #E8E3D5; color:#B8956A; font-size:18px;">☐</td>
-        <td style="padding:10px 8px; border-bottom:1px solid #E8E3D5; color:#1C1F2E; font-weight:600;">${n}</td>
-        <td style="padding:10px 8px; border-bottom:1px solid #E8E3D5; color:#B8956A;">${info.amounts.join(' / ')}</td>
-        <td style="padding:10px 8px; border-bottom:1px solid #E8E3D5; color:#5E5E5E; font-size:12px;">${[...new Set(info.from)].join('、')}</td>
-      </tr>
     `).join('')}
-  </table>
+  </div>
 
-  <div style="margin-top:36px; padding-top:16px; border-top:1px solid #D9D2BE; text-align:center; color:#B8956A; font-size:11px; letter-spacing:4px; text-transform:uppercase;">— END · ${dateStr} —</div>
+  <!-- 季节性提示 -->
+  <div style="margin:24px 30px 16px;text-align:center;padding:14px;border:1px solid #8B6F4D;background:rgba(255,250,235,0.4);font-size:13px;color:#3C2418;letter-spacing:1px;">
+    <span style="color:#A91D2C;font-size:16px;">★</span> 菜品根据季节和食材供应情况略有调整，请以实物为准 <span style="color:#A91D2C;font-size:16px;">★</span>
+  </div>
+
+  <!-- ============ 做法部分 ============ -->
+  <div style="margin:36px 30px 0;">
+    <div style="text-align:center;margin-bottom:24px;">
+      <h2 style="display:inline-block;font-size:32px;font-weight:600;color:#7B1F1F;letter-spacing:10px;border-top:2px solid #8B6F4D;border-bottom:2px solid #8B6F4D;padding:10px 36px;font-family:'STSong','Songti SC',serif;background:rgba(255,250,235,0.5);">大 厨 做 法</h2>
+    </div>
+
+    ${dishes.map((d,i)=>`
+      <div style="margin:0 0 22px;background:rgba(255,250,235,0.6);border:1px solid #C7A769;border-radius:6px;padding:18px;page-break-inside:avoid;">
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px dashed #8B6F4D;">
+          <div style="width:100px;height:100px;border-radius:8px;background:#FAEBC8;border:2px solid #8B6F4D;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;font-size:48px;flex-shrink:0;">
+            <img src="${dishPhotoUrl(d)}" crossorigin="anonymous" onerror="this.style.display='none'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" />
+            <span style="position:relative;z-index:1;text-shadow:0 2px 4px rgba(255,255,255,0.6);">${d.icon}</span>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:26px;font-weight:600;color:#3A1810;font-family:'STSong','Songti SC',serif;letter-spacing:2px;">${i+1}. ${d.name}</div>
+            <div style="color:#8B6F4D;font-size:11px;letter-spacing:1px;margin-top:5px;">${d.cat} · ${d.sub} · 约 ${d.time} 分钟</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <div style="color:#7B1F1F;font-size:13px;font-weight:600;margin-bottom:8px;letter-spacing:3px;">◎ 食 材</div>
+          <div style="background:rgba(245,235,200,0.5);padding:10px 14px;border-left:3px solid #7B1F1F;font-size:14px;line-height:2;">
+            ${d.ingredients.map(it=>`<span style="display:inline-block;margin-right:16px;color:#3A1810;">${it.n} <span style="color:#A91D2C;font-weight:600;">${it.a}</span></span>`).join('')}
+          </div>
+        </div>
+
+        <div>
+          <div style="color:#7B1F1F;font-size:13px;font-weight:600;margin-bottom:8px;letter-spacing:3px;">◎ 做 法</div>
+          <ol style="list-style:none;padding:0;margin:0;background:rgba(255,255,255,0.4);border:1px solid #E0CB94;border-radius:4px;">
+            ${d.steps.map((s,si)=>`
+              <li style="display:flex;gap:14px;padding:12px 14px;${si!==d.steps.length-1?'border-bottom:1px dotted #C7A769;':''}">
+                <span style="flex:0 0 28px;color:#A91D2C;font-weight:600;font-size:15px;font-family:'STSong',serif;">${si+1}.</span>
+                <span style="flex:1;font-size:14px;line-height:1.85;color:#2C1810;">${decorateStep(s)}</span>
+              </li>
+            `).join('')}
+          </ol>
+        </div>
+
+        <div style="margin-top:14px;background:#7B1F1F;color:#FAEBC8;padding:12px 16px;border-radius:4px;font-size:13px;line-height:1.85;">
+          <span style="color:#FFD89C;font-weight:600;font-size:14px;">★ 大厨秘诀：</span>${d.tip}
+        </div>
+      </div>
+    `).join('')}
+  </div>
+
+  <!-- ============ 采购清单 ============ -->
+  <div style="margin:36px 30px 0;">
+    <div style="text-align:center;margin-bottom:18px;">
+      <h2 style="display:inline-block;font-size:32px;font-weight:600;color:#7B1F1F;letter-spacing:10px;border-top:2px solid #8B6F4D;border-bottom:2px solid #8B6F4D;padding:10px 36px;font-family:'STSong','Songti SC',serif;background:rgba(255,250,235,0.5);">采 购 清 单</h2>
+    </div>
+
+    <div style="background:rgba(255,250,235,0.6);padding:14px;border:1px solid #C7A769;border-radius:6px;">
+      <div style="display:grid;grid-template-columns:44px 1fr 1fr 1.5fr;gap:8px;padding:10px 12px;background:#7B1F1F;color:#FAEBC8;border-radius:4px;font-size:12px;letter-spacing:3px;text-align:center;font-weight:600;">
+        <div>☐</div><div>食 材</div><div>用 量</div><div>用 于</div>
+      </div>
+      ${Object.entries(merged).map(([n,info])=>`
+        <div style="display:grid;grid-template-columns:44px 1fr 1fr 1.5fr;gap:8px;padding:11px 12px;border-bottom:1px dotted #C7A769;align-items:center;font-size:13px;">
+          <div style="text-align:center;color:#7B1F1F;font-size:18px;">☐</div>
+          <div style="color:#3A1810;font-weight:600;font-family:'STSong',serif;">${n}</div>
+          <div style="color:#A91D2C;font-weight:500;">${info.amounts.join(' / ')}</div>
+          <div style="color:#5C3A1F;font-size:12px;">${[...new Set(info.from)].join('、')}</div>
+        </div>
+      `).join('')}
+    </div>
+  </div>
+
+  <!-- 底部 -->
+  <div style="margin-top:32px;padding:20px 0 30px;text-align:center;color:#8B6F4D;font-size:11px;letter-spacing:5px;">
+    <div style="display:inline-flex;align-items:center;gap:10px;">
+      <span style="display:inline-block;width:30px;height:1px;background:#8B6F4D;"></span>
+      ${dateStr} · 共 ${dishes.length} 道菜
+      <span style="display:inline-block;width:30px;height:1px;background:#8B6F4D;"></span>
+    </div>
+  </div>
 
 </div>
   `;
@@ -3061,9 +3543,20 @@ function updateExclHint() {
 
 function init() {
   loadState();
-  // URL分享参数
+  loadAiConfig();
+  // 初始化 Firebase
+  initFirebase();
+  // URL 房间号参数（实时同步）
+  const urlParams = new URLSearchParams(window.location.search);
+  const roomFromUrl = urlParams.get('room');
+  if (roomFromUrl && SYNC.db) {
+    const myName = prompt('欢迎加入实时共享菜单！请输入你的名字：', '') || ('用户' + SYNC.myId.substring(2,5));
+    SYNC.myName = myName;
+    joinRoom(roomFromUrl, myName);
+  }
+  // 老式 URL分享参数 d=（兼容旧链接）
   const shared = loadFromUrl();
-  if (shared) {
+  if (shared && !roomFromUrl) {
     STATE.current = shared.dishes;
     STATE.lockedIds = new Set(shared.dishes.map(d=>d.id));
     setTimeout(() => {
