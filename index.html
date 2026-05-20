@@ -586,23 +586,56 @@
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(-8px); }
 
-  /* === History view === */
-  .history-item {
+  /* === History view (saved menus) === */
+  .saved-menu-card {
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     padding: 14px 16px;
-    margin: 0 16px 10px;
-    display: flex; justify-content: space-between; align-items: center;
+    margin: 0 16px 12px;
   }
-  .history-date {
-    font-size: 12px; color: var(--text-soft); margin-bottom: 4px;
+  .smc-head {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 10px;
   }
-  .history-dishes {
-    font-size: 14px; color: var(--text); font-weight: 500;
+  .smc-date {
+    font-family: var(--serif);
+    font-size: 18px; font-weight: 500; color: var(--navy);
+    font-style: italic; letter-spacing: 0.5px;
+  }
+  .smc-meta {
+    font-size: 11px; color: var(--brass);
+    letter-spacing: 1px; margin-top: 2px;
+  }
+  .smc-actions {
+    display: flex; gap: 6px;
+  }
+  .smc-btn {
+    padding: 6px 12px; border: 0; border-radius: 6px;
+    font-size: 12px; font-weight: 500; cursor: pointer;
+    font-family: inherit; letter-spacing: 1px;
+  }
+  .smc-preview {
+    background: var(--brass); color: var(--navy);
+  }
+  .smc-reuse {
+    background: var(--navy); color: var(--brass-light);
+  }
+  .smc-del {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-mute); font-size: 13px; padding: 6px 10px;
+  }
+  .smc-dishes {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    padding-top: 4px;
+  }
+  .smc-chip {
+    background: var(--cream-soft); color: var(--navy);
+    padding: 5px 10px; border-radius: 999px;
+    font-size: 12px; border: 1px solid var(--border);
   }
   .history-clear {
-    text-align: center; padding: 16px; color: var(--text-mute);
+    text-align: center; padding: 16px; color: #B0796A;
     font-size: 12px; cursor: pointer;
   }
 
@@ -718,6 +751,7 @@
       <span class="preset-chip" data-preset="fujian">🥟 福建</span>
       <span class="preset-chip" data-preset="hunan">🌶 湘菜</span>
       <span class="preset-chip" data-preset="chaoshan">🦪 潮汕</span>
+      <span class="preset-chip" data-preset="sichuan">🌶️ 川菜</span>
       <span class="preset-chip" data-preset="chef">👨‍🍳 厨师</span>
     </div>
 
@@ -776,9 +810,10 @@
       <span><strong id="statIng">0</strong> Items</span>
       <span><strong id="statTime">75</strong> Min</span>
     </div>
-    <button class="reroll-btn" id="rerollBtn" onclick="onRerollClick()">
-      ↻ Curate Again
-    </button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <button class="reroll-btn" id="rerollBtn" onclick="rerollAll(true)" style="margin:0;">↻ 换一组</button>
+      <button class="reroll-btn export-mode" id="exportBtn" onclick="exportTodayMenu()" style="margin:0;">📋 导出菜单</button>
+    </div>
     <div class="lock-hint" id="lockHint" style="display:none;">— Tap pin to lock a dish —</div>
     <button onclick="shareRoomMenu()" style="margin-top:10px;width:100%;padding:11px;background:linear-gradient(135deg,#16A34A,#22C55E);border:0;border-radius:8px;color:#fff;font-size:13px;font-weight:600;letter-spacing:2px;cursor:pointer;font-family:inherit;">🟢 实时共享菜单（Firebase）</button>
     <button onclick="shareMenu()" style="margin-top:6px;width:100%;padding:9px;background:transparent;border:1px solid rgba(184,149,106,.3);border-radius:8px;color:rgba(217,185,136,.7);font-size:11px;letter-spacing:1px;cursor:pointer;font-family:inherit;">📤 只发链接（不实时同步）</button>
@@ -814,6 +849,7 @@
     <div class="tab" data-cuisine="fujian">福建</div>
     <div class="tab" data-cuisine="hunan">湘菜</div>
     <div class="tab" data-cuisine="chaoshan">潮汕</div>
+    <div class="tab" data-cuisine="sichuan">川菜</div>
     <div class="tab" data-cat="纯荤">荤菜</div>
     <div class="tab" data-cat="荤素">荤素</div>
     <div class="tab" data-cat="纯素">素菜</div>
@@ -1925,7 +1961,334 @@ const DISHES = [
 {id:708,name:"蛋包饭",cat:"荤素",sub:"主食",cuisine:"local",icon:"🍳",time:20,tags:["儿童","营养均衡","家常","快手"],
  ingredients:[{n:"米饭",a:"2碗"},{n:"鸡蛋",a:"4个"},{n:"火腿丁",a:"50g"},{n:"豌豆胡萝卜丁",a:"50g"},{n:"番茄酱",a:"3勺"},{n:"生抽",a:"1勺"},{n:"盐",a:"少许"}],
  steps:["蔬菜丁焯水沥干。","锅入少油下火腿丁蔬菜丁炒香。","下米饭翻炒。","加番茄酱生抽炒匀盛入碗中按压成型。","鸡蛋打散加少许盐过筛。","平底锅刷薄油，倒入蛋液小火摊成圆蛋皮。","蛋皮基本凝固时放上米饭团。","蛋皮对折盖住米饭，倒扣盘中。","表面挤番茄酱画笑脸。"],
- tip:"日式风格小朋友最爱——蛋皮要薄要黄；米饭按压成船型更好包；番茄酱画笑脸增加趣味性。"}
+ tip:"日式风格小朋友最爱——蛋皮要薄要黄；米饭按压成船型更好包；番茄酱画笑脸增加趣味性。"},
+
+/* ============ 儿童营养餐大扩充 50 道 ============ */
+{id:801,name:"火腿玉米炒饭",cat:"荤素",sub:"主食",cuisine:"local",icon:"🍚",time:15,tags:["儿童","营养均衡","快手"],
+ ingredients:[{n:"隔夜米饭",a:"2碗"},{n:"火腿",a:"100g"},{n:"甜玉米粒",a:"100g"},{n:"鸡蛋",a:"2个"},{n:"盐",a:"少许"}],
+ steps:["米饭打散，火腿切丁，玉米焯水。","鸡蛋打散下油锅炒散盛出。","下火腿丁玉米丁翻炒。","下米饭翻炒至粒粒分明。","回入鸡蛋调盐起锅。"],
+ tip:"色彩明亮小朋友爱吃；隔夜冷饭才能炒得粒粒分明。"},
+
+{id:802,name:"黄金虾仁炒饭",cat:"荤素",sub:"主食",cuisine:"local",icon:"🦐",time:20,tags:["儿童","营养均衡","海鲜","补脑"],
+ ingredients:[{n:"隔夜米饭",a:"2碗"},{n:"鲜虾仁",a:"100g"},{n:"鸡蛋",a:"3个"},{n:"豌豆",a:"30g"},{n:"盐",a:"少许"}],
+ steps:["虾仁去虾线腌少许盐淀粉。","蛋黄蛋白分开，蛋黄拌入米饭让米饭裹黄。","锅热下油，虾仁滑炒变色盛出。","蛋白炒散，下黄金米饭翻炒。","回入虾仁豌豆，调盐起锅。"],
+ tip:"蛋黄包饭粒粒金黄诱人；虾仁补脑，孩子的最佳蛋白来源。"},
+
+{id:803,name:"番茄肉酱意面",cat:"荤素",sub:"主食",cuisine:"local",icon:"🍝",time:25,tags:["儿童","西式","营养均衡"],
+ ingredients:[{n:"意大利面",a:"200g"},{n:"猪肉糜",a:"200g"},{n:"番茄",a:"3个"},{n:"洋葱碎",a:"半个"},{n:"番茄酱",a:"2勺"},{n:"黑胡椒",a:"少许"},{n:"盐",a:"少许"},{n:"芝士粉",a:"适量"}],
+ steps:["意面煮8分钟过冷水。","番茄烫水去皮切碎。","锅入油炒洋葱碎，下肉糜炒散。","加番茄碎和番茄酱熬出红油。","加少许水煮5分钟。","调盐胡椒淋意面上，撒芝士粉。"],
+ tip:"小朋友最爱的西式正餐；芝士粉是关键；番茄要熬出沙汁才香。"},
+
+{id:804,name:"蘑菇奶油烩饭",cat:"荤素",sub:"主食",cuisine:"local",icon:"🍄",time:30,tags:["儿童","西式","营养均衡"],
+ ingredients:[{n:"米饭",a:"2碗"},{n:"鲜蘑菇",a:"200g"},{n:"鸡腿肉",a:"150g"},{n:"淡奶油",a:"100ml"},{n:"牛奶",a:"100ml"},{n:"洋葱碎",a:"半个"},{n:"盐",a:"少许"},{n:"黑胡椒",a:"少许"}],
+ steps:["鸡肉切丁腌盐胡椒。","蘑菇切片。","锅入黄油炒洋葱蘑菇出香。","下鸡丁炒变色。","加淡奶油牛奶煮3分钟。","加米饭拌匀煮至浓稠，调盐。"],
+ tip:"奶香浓郁小朋友难抗拒；用淡奶油更香醇，可省略改全牛奶。"},
+
+{id:805,name:"鸡肉芝士焗饭",cat:"荤素",sub:"主食",cuisine:"local",icon:"🧀",time:35,tags:["儿童","西式","营养均衡"],
+ ingredients:[{n:"米饭",a:"2碗"},{n:"鸡腿肉",a:"200g"},{n:"马苏里拉芝士",a:"100g"},{n:"番茄酱",a:"2勺"},{n:"洋葱",a:"半个"},{n:"豌豆胡萝卜",a:"适量"},{n:"盐",a:"少许"}],
+ steps:["鸡肉切丁炒变色加洋葱蔬菜。","加番茄酱炒香。","混入米饭装焗碗。","表面铺满芝士。","烤箱200度烤15分钟至芝士金黄拉丝。"],
+ tip:"芝士拉丝小朋友尖叫；用马苏里拉芝士才能拉丝。"},
+
+{id:806,name:"海苔肉松饭团",cat:"荤素",sub:"主食",cuisine:"local",icon:"🍙",time:15,tags:["儿童","快手","便携"],
+ ingredients:[{n:"米饭",a:"2碗"},{n:"肉松",a:"50g"},{n:"海苔片",a:"5片"},{n:"白芝麻",a:"少许"},{n:"盐",a:"少许"}],
+ steps:["米饭趁热加少许盐拌匀。","保鲜膜上铺米饭压扁。","中间放肉松卷起或捏圆。","外面裹海苔片。","撒白芝麻装盘。"],
+ tip:"便携小朋友爱吃；可做早餐或加餐；海苔可换芝士片。"},
+
+{id:807,name:"儿童三文治寿司",cat:"荤素",sub:"主食",cuisine:"local",icon:"🍣",time:20,tags:["儿童","西式","快手"],
+ ingredients:[{n:"吐司",a:"4片"},{n:"鸡蛋",a:"2个"},{n:"火腿",a:"4片"},{n:"芝士片",a:"2片"},{n:"黄瓜",a:"半根"},{n:"沙拉酱",a:"适量"}],
+ steps:["吐司去边压扁。","鸡蛋摊蛋皮。","吐司涂沙拉酱铺火腿芝士蛋皮黄瓜条。","紧紧卷起。","切4段成寿司状。"],
+ tip:"造型可爱小朋友爱不释手；可当早餐或便当。"},
+
+{id:808,name:"番茄海鲜乌冬",cat:"荤素",sub:"主食",cuisine:"local",icon:"🍜",time:25,tags:["儿童","营养均衡","海鲜"],
+ ingredients:[{n:"乌冬面",a:"200g"},{n:"鲜虾",a:"6只"},{n:"扇贝",a:"4只"},{n:"番茄",a:"2个"},{n:"洋葱",a:"半个"},{n:"番茄酱",a:"2勺"},{n:"盐",a:"少许"}],
+ steps:["乌冬面煮熟过冷水。","番茄烫水去皮切丁，洋葱切丁。","锅入油炒番茄洋葱出沙汁。","加水煮开下海鲜煮3分钟。","下乌冬煮入味，调盐起锅。"],
+ tip:"番茄基底酸甜不辣；海鲜先煮后捞防过老。"},
+
+{id:809,name:"牛肉胡萝卜炒面",cat:"荤素",sub:"主食",cuisine:"local",icon:"🍝",time:20,tags:["儿童","营养均衡","补铁"],
+ ingredients:[{n:"鸡蛋面",a:"200g"},{n:"嫩牛肉",a:"150g"},{n:"胡萝卜",a:"1根"},{n:"小白菜",a:"几棵"},{n:"姜片",a:"3片"},{n:"生抽",a:"2勺"},{n:"小苏打",a:"一小撮"},{n:"淀粉",a:"半勺"}],
+ steps:["牛肉切丝加小苏打生抽淀粉腌15分钟。","面煮8分熟过冷水。","胡萝卜切丝焯水。","锅入油下姜片爆香，下牛肉滑炒变色盛出。","下胡萝卜炒软，回入牛肉。","下面条翻炒，加生抽调味，加小白菜出锅。"],
+ tip:"营养全面：碳水+蛋白+维A；牛肉小苏打嫩肉是关键。"},
+
+{id:810,name:"鲜虾三鲜饺子",cat:"荤素",sub:"主食",cuisine:"local",icon:"🥟",time:45,tags:["儿童","营养均衡","海鲜"],
+ ingredients:[{n:"饺子皮",a:"30张"},{n:"猪肉糜",a:"200g"},{n:"鲜虾仁",a:"100g"},{n:"白菜",a:"200g"},{n:"姜末",a:"少许"},{n:"生抽",a:"1勺"},{n:"麻油",a:"半勺"},{n:"盐",a:"少许"}],
+ steps:["白菜剁碎加盐挤水。","虾仁切粒。","肉糜加姜末生抽麻油盐搅打上劲。","拌入白菜虾仁。","包饺子。","水开下饺子煮浮起再煮2分钟。"],
+ tip:"三鲜（猪肉+虾+白菜）营养均衡；可一次包多冷冻保存。"},
+
+{id:811,name:"玉米虾仁鸡粥",cat:"荤素",sub:"主食",cuisine:"local",icon:"🍚",time:60,tags:["儿童","养胃","营养均衡"],
+ ingredients:[{n:"大米",a:"1杯"},{n:"鸡胸肉",a:"100g"},{n:"虾仁",a:"50g"},{n:"甜玉米粒",a:"50g"},{n:"姜丝",a:"少许"},{n:"盐",a:"少许"}],
+ steps:["大米加水煮粥40分钟。","鸡胸切丝腌淀粉。","粥煮稠时下玉米粒煮5分钟。","下鸡丝虾仁煮3分钟。","调盐撒姜丝。"],
+ tip:"鲜虾+玉米+鸡肉，营养全面；适合早餐或病后调理。"},
+
+{id:812,name:"海带瘦肉粥",cat:"荤素",sub:"主食",cuisine:"local",icon:"🥣",time:60,tags:["儿童","养胃","补钙"],
+ ingredients:[{n:"大米",a:"1杯"},{n:"猪瘦肉",a:"150g"},{n:"海带丝",a:"50g"},{n:"姜丝",a:"少许"},{n:"盐",a:"少许"}],
+ steps:["大米加水煮粥40分钟。","瘦肉切丝腌淀粉。","海带泡软切丝。","粥稠时下海带瘦肉煮5分钟。","调盐撒葱花。"],
+ tip:"海带补钙，瘦肉补铁，是儿童成长好搭档。"},
+
+{id:813,name:"蘑菇鸡丝粥",cat:"荤素",sub:"主食",cuisine:"local",icon:"🍚",time:60,tags:["儿童","养胃","清淡"],
+ ingredients:[{n:"大米",a:"1杯"},{n:"鸡胸肉",a:"150g"},{n:"鲜香菇",a:"4朵"},{n:"姜丝",a:"少许"},{n:"盐",a:"少许"}],
+ steps:["大米煮粥40分钟。","鸡胸切丝腌淀粉。","香菇切丝。","粥稠时下香菇煮5分钟。","下鸡丝煮3分钟，调盐。"],
+ tip:"香菇鲜美天然提味；早晚都适合。"},
+
+{id:814,name:"蔬菜煎饼",cat:"荤素",sub:"主食",cuisine:"local",icon:"🥞",time:15,tags:["儿童","快手","蔬菜"],
+ ingredients:[{n:"面粉",a:"100g"},{n:"鸡蛋",a:"2个"},{n:"胡萝卜碎",a:"50g"},{n:"菠菜碎",a:"50g"},{n:"火腿丁",a:"50g"},{n:"牛奶",a:"100ml"},{n:"盐",a:"少许"}],
+ steps:["面粉加鸡蛋牛奶盐搅成面糊。","加入蔬菜火腿丁。","平底锅刷油倒入面糊摊薄。","小火煎至两面金黄。","切块或卷起。"],
+ tip:"蔬菜混入面糊孩子不挑食；早餐快手好搭档。"},
+
+{id:815,name:"咖喱牛肉拌饭",cat:"荤素",sub:"主食",cuisine:"local",icon:"🍛",time:40,tags:["儿童","营养均衡","下饭"],
+ ingredients:[{n:"米饭",a:"2碗"},{n:"嫩牛肉",a:"200g"},{n:"土豆",a:"1个"},{n:"胡萝卜",a:"1根"},{n:"洋葱",a:"半个"},{n:"咖喱块",a:"60g"},{n:"椰浆",a:"50ml"}],
+ steps:["牛肉切片腌小苏打。","土豆胡萝卜洋葱切块。","锅入油下洋葱炒香，下牛肉炒变色。","加水大火烧开下土豆胡萝卜炖20分钟。","加咖喱块和椰浆煮5分钟。","浇在米饭上。"],
+ tip:"日式咖喱比港式甜，更适合儿童；椰浆提香增甜。"},
+
+{id:816,name:"蜂蜜烤鸡翅",cat:"纯荤",sub:"禽类",cuisine:"local",icon:"🍗",time:40,tags:["儿童","下饭","烤箱"],
+ ingredients:[{n:"鸡翅中",a:"500g"},{n:"蜂蜜",a:"2勺"},{n:"生抽",a:"2勺"},{n:"料酒",a:"1勺"},{n:"姜片",a:"3片"},{n:"黑胡椒",a:"少许"}],
+ steps:["鸡翅两面划刀。","加生抽料酒姜片黑胡椒腌1小时。","烤箱预热200度。","鸡翅刷一层蜂蜜入烤箱烤20分钟。","翻面再刷一次蜂蜜烤10分钟至焦糖色。"],
+ tip:"蜂蜜烤出焦糖色诱人；外脆里嫩孩子无敌。"},
+
+{id:817,name:"烧汁鸡腿",cat:"纯荤",sub:"禽类",cuisine:"local",icon:"🍗",time:30,tags:["儿童","下饭"],
+ ingredients:[{n:"鸡腿",a:"3只"},{n:"生抽",a:"3勺"},{n:"老抽",a:"半勺"},{n:"冰糖",a:"15g"},{n:"姜片",a:"3片"},{n:"米酒",a:"1勺"}],
+ steps:["鸡腿剁块焯水。","锅入冰糖炒糖色。","下鸡块翻炒上色。","加生抽老抽米酒姜片。","加热水盖盖中火焖25分钟。","开盖大火收汁。"],
+ tip:"经典甜咸口下饭神器；汁拌饭一绝。"},
+
+{id:818,name:"番茄烩肉丸",cat:"荤素",sub:"猪肉",cuisine:"local",icon:"🍅",time:30,tags:["儿童","下饭","快手"],
+ ingredients:[{n:"猪肉糜",a:"300g"},{n:"番茄",a:"3个"},{n:"鸡蛋",a:"1个"},{n:"葱姜末",a:"少许"},{n:"番茄酱",a:"2勺"},{n:"淀粉",a:"1勺"},{n:"白糖",a:"半勺"},{n:"盐",a:"少许"}],
+ steps:["肉糜加蛋葱姜末淀粉盐搅打上劲。","团成小球冷水下锅煮浮起。","番茄烫水去皮切丁。","锅入油炒番茄出沙汁，加番茄酱糖盐。","加肉丸煮5分钟入味。"],
+ tip:"酸甜适口小朋友最爱；可以一次多做冻起来。"},
+
+{id:819,name:"黄金牛肉松",cat:"纯荤",sub:"牛肉",cuisine:"local",icon:"🥩",time:60,tags:["儿童","补铁","便携"],
+ ingredients:[{n:"牛瘦肉",a:"500g"},{n:"姜片",a:"4片"},{n:"生抽",a:"2勺"},{n:"五香粉",a:"少许"},{n:"白糖",a:"半勺"},{n:"植物油",a:"适量"}],
+ steps:["牛肉冷水焯水洗净。","加水加姜片煮40分钟至软。","捞出冷却用擀面杖敲松。","用手撕成丝。","锅入少油下肉松翻炒。","加生抽五香粉糖小火炒20分钟至干酥。"],
+ tip:"自制肉松无添加；可拌粥或夹三明治。"},
+
+{id:820,name:"滑蛋牛肉",cat:"荤素",sub:"牛肉",cuisine:"canton",icon:"🥚",time:15,tags:["儿童","补脑","补铁","快手"],
+ ingredients:[{n:"嫩牛肉",a:"200g"},{n:"鸡蛋",a:"4个"},{n:"牛奶",a:"3勺"},{n:"姜片",a:"3片"},{n:"生抽",a:"1勺"},{n:"小苏打",a:"一小撮"},{n:"淀粉",a:"半勺"}],
+ steps:["牛肉切片加小苏打淀粉生抽腌15分钟。","鸡蛋加牛奶盐打散。","锅入油下姜片，下牛肉滑炒变色盛出。","锅入冷油下蛋液小火推炒。","蛋液半凝固时回入牛肉。","推匀立即出锅。"],
+ tip:"广式经典：加牛奶让蛋更嫩；蛋只能7分熟。"},
+
+{id:821,name:"焗烤鸡腿排",cat:"纯荤",sub:"禽类",cuisine:"local",icon:"🍗",time:30,tags:["儿童","烤箱","西式"],
+ ingredients:[{n:"去骨鸡腿",a:"4只"},{n:"黑胡椒",a:"少许"},{n:"盐",a:"少许"},{n:"迷迭香",a:"少许"},{n:"橄榄油",a:"2勺"},{n:"柠檬汁",a:"几滴"}],
+ steps:["鸡腿划几刀。","抹盐黑胡椒迷迭香橄榄油柠檬汁腌30分钟。","烤箱预热200度。","鸡腿皮朝上烤25分钟至金黄。"],
+ tip:"西式做法少油少盐；柠檬汁去腥更清爽。"},
+
+{id:822,name:"三色蒸蛋",cat:"荤素",sub:"蛋豆",cuisine:"local",icon:"🥚",time:25,tags:["儿童","快手","营养均衡"],
+ ingredients:[{n:"鸡蛋",a:"3个"},{n:"虾仁",a:"50g"},{n:"玉米粒",a:"30g"},{n:"火腿丁",a:"30g"},{n:"温水",a:"1.5倍蛋液"},{n:"生抽",a:"半勺"},{n:"盐",a:"少许"}],
+ steps:["鸡蛋打散加盐温水搅匀过筛。","虾仁玉米火腿丁拌入蛋液。","盖盘子防水汽。","水开后中小火蒸12分钟。","出锅淋生抽。"],
+ tip:"三色齐全营养丰富；过筛是镜面蒸蛋秘诀。"},
+
+{id:823,name:"鲜贝蒸蛋",cat:"荤素",sub:"蛋豆",cuisine:"local",icon:"🦪",time:20,tags:["儿童","海鲜","快手"],
+ ingredients:[{n:"鸡蛋",a:"3个"},{n:"鲜贝(扇贝肉)",a:"100g"},{n:"温水",a:"1.5倍蛋液"},{n:"生抽",a:"1勺"},{n:"麻油",a:"几滴"},{n:"葱花",a:"少许"}],
+ steps:["鲜贝洗净切丁焯水。","鸡蛋打散加温水盐搅匀过筛。","拌入鲜贝丁。","盖盘子水开蒸12分钟。","出锅淋生抽麻油撒葱花。"],
+ tip:"扇贝肉鲜美；蛋蒸到刚刚凝固最嫩。"},
+
+{id:824,name:"鸡肉脆皮卷",cat:"纯荤",sub:"禽类",cuisine:"local",icon:"🌯",time:30,tags:["儿童","西式","便携"],
+ ingredients:[{n:"鸡胸肉",a:"300g"},{n:"春卷皮",a:"6张"},{n:"芝士片",a:"3片"},{n:"火腿片",a:"6片"},{n:"鸡蛋液",a:"1个"},{n:"面包糠",a:"1碗"}],
+ steps:["鸡胸切薄片拍松腌盐。","春卷皮上铺鸡片火腿芝士。","卷起封口刷蛋液裹面包糠。","锅入宽油六成热下卷子炸至金黄。"],
+ tip:"外酥内嫩芝士拉丝；可冷冻保存随炸随吃。"},
+
+{id:825,name:"牛肉芝士卷",cat:"纯荤",sub:"牛肉",cuisine:"local",icon:"🥩",time:25,tags:["儿童","西式","补铁"],
+ ingredients:[{n:"牛肉薄片",a:"300g"},{n:"马苏里拉芝士",a:"100g"},{n:"芦笋",a:"6根"},{n:"黑胡椒",a:"少许"},{n:"盐",a:"少许"},{n:"生抽",a:"1勺"}],
+ steps:["牛肉片撒盐黑胡椒。","芝士切条放牛肉上加芦笋。","紧紧卷起用牙签固定。","锅入油煎至各面金黄。","淋少许生抽出锅。"],
+ tip:"芝士融化拉丝小朋友尖叫；芦笋补充维生素。"},
+
+{id:826,name:"西芹炒虾仁",cat:"荤素",sub:"水产",cuisine:"local",icon:"🦐",time:15,tags:["儿童","补脑","快手","海鲜"],
+ ingredients:[{n:"鲜虾仁",a:"200g"},{n:"西芹",a:"2根"},{n:"姜片",a:"3片"},{n:"盐",a:"少许"},{n:"淀粉",a:"半勺"},{n:"蛋清",a:"1个"}],
+ steps:["虾仁抓盐冲洗，加蛋清淀粉腌10分钟。","西芹焯水切段。","锅入油下姜片爆香。","下虾仁滑炒变色。","下西芹翻炒1分钟，调盐出锅。"],
+ tip:"清淡爽口宝宝爱；西芹焯水更脆。"},
+
+{id:827,name:"番茄烩鸡片",cat:"荤素",sub:"禽类",cuisine:"local",icon:"🍅",time:20,tags:["儿童","快手","下饭"],
+ ingredients:[{n:"鸡胸肉",a:"300g"},{n:"番茄",a:"3个"},{n:"洋葱",a:"半个"},{n:"番茄酱",a:"2勺"},{n:"白糖",a:"少许"},{n:"盐",a:"少许"},{n:"淀粉",a:"半勺"}],
+ steps:["鸡胸切片加淀粉盐腌10分钟。","番茄烫水去皮切丁。","锅入油下洋葱炒香，下鸡片滑炒变色盛出。","下番茄炒沙汁加番茄酱糖盐。","回入鸡片煮入味。"],
+ tip:"番茄维C促进铁吸收；酸甜适口下饭神器。"},
+
+{id:828,name:"玉米焗鸡腿",cat:"纯荤",sub:"禽类",cuisine:"local",icon:"🌽",time:40,tags:["儿童","烤箱","营养均衡"],
+ ingredients:[{n:"鸡腿",a:"4只"},{n:"甜玉米粒",a:"150g"},{n:"芝士",a:"50g"},{n:"洋葱碎",a:"半个"},{n:"番茄酱",a:"2勺"},{n:"盐",a:"少许"}],
+ steps:["鸡腿剁块腌盐黑胡椒。","锅入油煎鸡腿表面焦黄。","加洋葱玉米番茄酱炒匀。","转入烤碗，上面铺芝士。","烤箱200度烤15分钟。"],
+ tip:"玉米+鸡腿+芝士三重营养；烤箱菜免看火省心。"},
+
+{id:829,name:"儿童嫩煎牛排",cat:"纯荤",sub:"牛肉",cuisine:"local",icon:"🥩",time:15,tags:["儿童","补铁","西式"],
+ ingredients:[{n:"菲力牛排",a:"200g"},{n:"黄油",a:"10g"},{n:"黑胡椒",a:"少许"},{n:"盐",a:"少许"},{n:"迷迭香",a:"少许"}],
+ steps:["牛排室温回温30分钟。","两面抹盐黑胡椒。","平底锅大火烧热下黄油。","牛排每面煎1.5分钟（5成熟）。","加迷迭香增香，关火静置3分钟。","切条装盘。"],
+ tip:"5成熟儿童版口感最嫩；静置让肉汁回吸。"},
+
+{id:830,name:"黑椒牛仔粒",cat:"荤素",sub:"牛肉",cuisine:"local",icon:"🐂",time:20,tags:["儿童","补铁","下饭"],
+ ingredients:[{n:"牛里脊",a:"300g"},{n:"洋葱",a:"半个"},{n:"青红椒",a:"各半个"},{n:"黑胡椒",a:"半勺"},{n:"蚝油",a:"1勺"},{n:"生抽",a:"1勺"},{n:"小苏打",a:"一小撮"}],
+ steps:["牛肉切丁加小苏打蚝油淀粉腌15分钟。","洋葱青红椒切块。","锅入油下牛肉大火快炒变色盛出。","下洋葱青红椒炒香。","回入牛肉加黑胡椒生抽翻匀。"],
+ tip:"黑胡椒微辣不刺激；牛肉嫩滑配饭一绝。"},
+
+{id:831,name:"蜂蜜柠檬鸡",cat:"纯荤",sub:"禽类",cuisine:"local",icon:"🍋",time:30,tags:["儿童","开胃","清爽"],
+ ingredients:[{n:"鸡胸肉",a:"300g"},{n:"柠檬",a:"1个"},{n:"蜂蜜",a:"2勺"},{n:"生抽",a:"1勺"},{n:"淀粉",a:"半勺"}],
+ steps:["鸡胸切条加淀粉盐腌10分钟。","柠檬挤汁。","锅入油下鸡条煎至两面金黄。","加蜂蜜生抽柠檬汁少许水。","小火收汁裹住鸡条。"],
+ tip:"酸甜清爽夏天首选；用真柠檬比柠檬粉香。"},
+
+{id:832,name:"南瓜浓汤",cat:"汤",sub:"养生汤",cuisine:"local",icon:"🎃",time:30,tags:["儿童","养胃","西式"],
+ ingredients:[{n:"南瓜",a:"500g"},{n:"牛奶",a:"300ml"},{n:"洋葱",a:"半个"},{n:"黄油",a:"15g"},{n:"盐",a:"少许"},{n:"黑胡椒",a:"少许"}],
+ steps:["南瓜去皮蒸熟。","洋葱碎用黄油炒香。","南瓜+洋葱+牛奶用料理机打成浓汤。","回锅小火煮3分钟。","调盐胡椒。"],
+ tip:"金黄甜美小朋友爱不释手；可加奶油更香醇。"},
+
+{id:833,name:"玉米奶油浓汤",cat:"汤",sub:"养生汤",cuisine:"local",icon:"🌽",time:25,tags:["儿童","西式","养胃"],
+ ingredients:[{n:"甜玉米",a:"2根"},{n:"牛奶",a:"300ml"},{n:"鸡汤",a:"200ml"},{n:"洋葱",a:"半个"},{n:"黄油",a:"15g"},{n:"面粉",a:"1勺"},{n:"盐",a:"少许"}],
+ steps:["玉米粒切下，留一部分。","洋葱碎用黄油炒香加面粉炒匀。","加鸡汤牛奶大部分玉米粒煮5分钟。","料理机打成浓汤。","回锅加剩余玉米粒煮，调盐。"],
+ tip:"留一部分玉米粒口感更丰富；甜味来自玉米本身。"},
+
+{id:834,name:"西兰花炒玉米",cat:"纯素",sub:"叶菜",cuisine:"local",icon:"🥦",time:10,tags:["儿童","快手","清淡"],
+ ingredients:[{n:"西兰花",a:"1棵"},{n:"甜玉米粒",a:"100g"},{n:"姜片",a:"3片"},{n:"盐",a:"少许"},{n:"白糖",a:"少许"}],
+ steps:["西兰花掰小朵焯水。","玉米粒焯水。","锅入油下姜片爆香。","下西兰花玉米翻炒。","调盐和一小撮糖出锅。"],
+ tip:"色彩鲜艳孩子也爱；糖一小撮提鲜不甜。"},
+
+{id:835,name:"紫薯山药泥",cat:"纯素",sub:"根茎",cuisine:"local",icon:"🥔",time:30,tags:["儿童","养胃","下午茶"],
+ ingredients:[{n:"紫薯",a:"200g"},{n:"铁棍山药",a:"200g"},{n:"牛奶",a:"100ml"},{n:"蜂蜜",a:"1勺"}],
+ steps:["紫薯山药去皮切块蒸熟。","压成泥加牛奶蜂蜜拌匀。","可挤成花型装盘。"],
+ tip:"五颜六色营养下午茶；山药护胃紫薯助消化。"},
+
+{id:836,name:"香煎南瓜饼",cat:"纯素",sub:"根茎",cuisine:"local",icon:"🥞",time:25,tags:["儿童","下午茶","快手"],
+ ingredients:[{n:"南瓜",a:"300g"},{n:"糯米粉",a:"150g"},{n:"白糖",a:"20g"},{n:"豆沙(可选)",a:"适量"},{n:"芝麻",a:"少许"}],
+ steps:["南瓜蒸熟压泥。","加糯米粉糖揉成面团。","分小块按扁，可包豆沙。","表面蘸芝麻。","平底锅小火煎至两面金黄。"],
+ tip:"软糯香甜小朋友爱；可加豆沙馅升级。"},
+
+{id:837,name:"时蔬鸡丁",cat:"荤素",sub:"禽类",cuisine:"local",icon:"🍗",time:15,tags:["儿童","快手","营养均衡"],
+ ingredients:[{n:"鸡胸肉",a:"250g"},{n:"胡萝卜",a:"半根"},{n:"黄瓜",a:"半根"},{n:"玉米粒",a:"50g"},{n:"姜片",a:"3片"},{n:"生抽",a:"1勺"},{n:"淀粉",a:"半勺"},{n:"花生(可选)",a:"30g"}],
+ steps:["鸡胸切丁腌盐淀粉。","胡萝卜黄瓜切丁，玉米焯水。","锅入油下姜爆香，下鸡丁滑炒变色。","下胡萝卜玉米黄瓜翻炒。","调生抽快速翻匀，撒花生。"],
+ tip:"色彩缤纷营养全面；不放辣椒比宫保鸡丁安全。"},
+
+{id:838,name:"椰浆鸡咖喱",cat:"纯荤",sub:"禽类",cuisine:"local",icon:"🥥",time:35,tags:["儿童","西式","营养均衡"],
+ ingredients:[{n:"鸡腿肉",a:"400g"},{n:"土豆",a:"1个"},{n:"胡萝卜",a:"1根"},{n:"椰浆",a:"200ml"},{n:"咖喱块",a:"60g"},{n:"洋葱",a:"半个"}],
+ steps:["鸡腿切块。","蔬菜切块。","锅入油下洋葱炒香，下鸡块炒变色。","加水大火烧开下土豆胡萝卜炖15分钟。","加咖喱块溶化。","加椰浆煮5分钟。"],
+ tip:"椰浆中和咖喱辛辣，孩子也爱；适合配饭。"},
+
+{id:839,name:"番茄炖蔬菜",cat:"纯素",sub:"根茎",cuisine:"local",icon:"🍅",time:25,tags:["儿童","清淡","蔬菜"],
+ ingredients:[{n:"番茄",a:"3个"},{n:"土豆",a:"1个"},{n:"胡萝卜",a:"1根"},{n:"洋葱",a:"半个"},{n:"番茄酱",a:"2勺"},{n:"盐",a:"少许"}],
+ steps:["番茄烫水去皮切块。","土豆胡萝卜洋葱切块。","锅入油下洋葱炒香。","下番茄炒沙汁加番茄酱。","下土豆胡萝卜加水煮15分钟。","调盐起锅。"],
+ tip:"全素汤式炖菜；维生素满满。"},
+
+{id:840,name:"蒸南瓜",cat:"纯素",sub:"根茎",cuisine:"local",icon:"🎃",time:20,tags:["儿童","简单","养胃"],
+ ingredients:[{n:"南瓜",a:"500g"},{n:"蜂蜜(可选)",a:"少许"}],
+ steps:["南瓜削皮切块。","摆盘水开后蒸15分钟。","出锅可淋少许蜂蜜。"],
+ tip:"最简单的做法保留南瓜本味；适合任何年龄。"},
+
+{id:841,name:"番茄牛尾汤",cat:"汤",sub:"老火汤",cuisine:"local",icon:"🥣",time:120,tags:["儿童","补铁","养生"],
+ ingredients:[{n:"牛尾",a:"800g"},{n:"番茄",a:"3个"},{n:"洋葱",a:"半个"},{n:"胡萝卜",a:"1根"},{n:"土豆",a:"1个"},{n:"姜片",a:"3片"},{n:"盐",a:"少许"}],
+ steps:["牛尾切段焯水。","番茄烫水去皮切块。","砂锅加水放牛尾姜片大火烧开转小火炖90分钟。","加番茄洋葱胡萝卜土豆炖20分钟。","调盐起锅。"],
+ tip:"牛尾胶原蛋白丰富；番茄提鲜增酸。"},
+
+{id:842,name:"奶油蘑菇浓汤",cat:"汤",sub:"养生汤",cuisine:"local",icon:"🍄",time:25,tags:["儿童","西式","养胃"],
+ ingredients:[{n:"鲜蘑菇",a:"300g"},{n:"牛奶",a:"300ml"},{n:"淡奶油",a:"100ml"},{n:"洋葱",a:"半个"},{n:"黄油",a:"15g"},{n:"面粉",a:"1勺"},{n:"盐",a:"少许"}],
+ steps:["蘑菇切片。","洋葱碎用黄油炒香加面粉炒匀。","加蘑菇炒3分钟。","加牛奶煮5分钟。","料理机打成浓汤回锅加淡奶油。","调盐胡椒。"],
+ tip:"西式经典浓汤；蘑菇本味鲜美。"},
+
+{id:843,name:"紫菜虾仁汤",cat:"汤",sub:"素汤",cuisine:"local",icon:"🍵",time:15,tags:["儿童","快手","清淡"],
+ ingredients:[{n:"鲜虾仁",a:"100g"},{n:"紫菜",a:"1把"},{n:"鸡蛋",a:"2个"},{n:"姜丝",a:"少许"},{n:"葱花",a:"少许"},{n:"盐",a:"少许"},{n:"麻油",a:"少许"}],
+ steps:["紫菜撕小块放碗底。","锅加水放姜丝烧开。","下虾仁煮2分钟。","淋蛋液成蛋花。","汤冲入紫菜碗，调盐淋麻油撒葱花。"],
+ tip:"快手营养汤；紫菜补碘虾仁补蛋白。"},
+
+{id:844,name:"胡萝卜玉米排骨汤",cat:"汤",sub:"老火汤",cuisine:"local",icon:"🥕",time:90,tags:["儿童","补钙","营养均衡"],
+ ingredients:[{n:"猪肋排",a:"500g"},{n:"胡萝卜",a:"2根"},{n:"甜玉米",a:"2根"},{n:"姜片",a:"3片"},{n:"红枣",a:"4颗"},{n:"盐",a:"少许"}],
+ steps:["排骨焯水。","胡萝卜玉米切段。","砂锅加水放排骨姜片红枣大火烧开转小火炖50分钟。","加胡萝卜玉米炖30分钟。","调盐。"],
+ tip:"三高营养汤；甜美不腻孩子最爱。"},
+
+{id:845,name:"牛肉丸豆腐汤",cat:"汤",sub:"潮汕汤",cuisine:"local",icon:"⚪",time:20,tags:["儿童","补铁","快手"],
+ ingredients:[{n:"牛肉丸",a:"15颗"},{n:"嫩豆腐",a:"半盒"},{n:"小白菜",a:"几棵"},{n:"姜丝",a:"少许"},{n:"白胡椒",a:"少许"},{n:"盐",a:"少许"}],
+ steps:["牛肉丸划十字花刀。","豆腐切块。","锅加水放姜丝烧开。","下豆腐牛肉丸煮5分钟。","加小白菜调盐胡椒。"],
+ tip:"清淡补钙铁；可换鱼丸或虾丸。"},
+
+{id:846,name:"海带豆腐汤",cat:"汤",sub:"素汤",cuisine:"local",icon:"🍵",time:30,tags:["儿童","补钙","清淡"],
+ ingredients:[{n:"海带丝",a:"100g"},{n:"嫩豆腐",a:"1盒"},{n:"瘦肉丝",a:"100g"},{n:"姜片",a:"3片"},{n:"盐",a:"少许"}],
+ steps:["海带泡软。","豆腐切块，瘦肉切丝。","锅入油下姜片煸香。","下肉丝炒变色加水。","下海带煮15分钟。","加豆腐煮5分钟，调盐。"],
+ tip:"海带补碘豆腐补钙；适合儿童成长期。"},
+
+{id:847,name:"黄豆排骨汤",cat:"汤",sub:"老火汤",cuisine:"local",icon:"🍵",time:120,tags:["儿童","补钙","养生"],
+ ingredients:[{n:"猪肋排",a:"500g"},{n:"黄豆",a:"50g"},{n:"胡萝卜",a:"1根"},{n:"姜片",a:"3片"},{n:"盐",a:"少许"}],
+ steps:["黄豆提前浸泡4小时。","排骨焯水。","砂锅加水放排骨黄豆姜片炖90分钟。","加胡萝卜炖20分钟，调盐。"],
+ tip:"黄豆植物蛋白丰富；适合儿童补钙。"},
+
+{id:848,name:"番茄豆腐汤",cat:"汤",sub:"素汤",cuisine:"local",icon:"🍅",time:15,tags:["儿童","快手","清淡"],
+ ingredients:[{n:"番茄",a:"2个"},{n:"嫩豆腐",a:"1盒"},{n:"鸡蛋",a:"2个"},{n:"姜丝",a:"少许"},{n:"盐",a:"少许"},{n:"白糖",a:"少许"}],
+ steps:["番茄烫水去皮切块。","豆腐切丁。","锅入油下姜炒番茄出沙汁。","加水煮开下豆腐煮3分钟。","淋蛋液成蛋花。","调盐糖。"],
+ tip:"酸甜开胃；豆腐补钙快手汤。"},
+
+{id:849,name:"胡萝卜山药汤",cat:"汤",sub:"养生汤",cuisine:"local",icon:"🥕",time:60,tags:["儿童","养胃","清淡"],
+ ingredients:[{n:"铁棍山药",a:"1根"},{n:"胡萝卜",a:"1根"},{n:"猪瘦肉",a:"200g"},{n:"姜片",a:"3片"},{n:"红枣",a:"4颗"},{n:"盐",a:"少许"}],
+ steps:["瘦肉焯水。","山药胡萝卜切块。","砂锅加水放肉姜片红枣炖40分钟。","加山药胡萝卜炖20分钟。","调盐。"],
+ tip:"养胃补脾；适合脾胃虚弱的孩子。"},
+
+{id:850,name:"玉米南瓜羹",cat:"汤",sub:"养生汤",cuisine:"local",icon:"🌽",time:25,tags:["儿童","养胃","下午茶"],
+ ingredients:[{n:"甜玉米",a:"1根"},{n:"南瓜",a:"200g"},{n:"牛奶",a:"200ml"},{n:"白糖",a:"少许"},{n:"淀粉",a:"少许"}],
+ steps:["南瓜蒸熟压泥。","玉米煮熟切粒。","锅加水放南瓜泥玉米粒。","加牛奶煮3分钟。","水淀粉勾芡，调少许糖。"],
+ tip:"金黄甜美营养丰富；适合早餐或下午茶。"},
+
+/* ============ 川菜 15 道 ============ */
+{id:851,name:"宫保鸡丁",cat:"荤素",sub:"禽类",cuisine:"sichuan",icon:"🌶",time:25,tags:["川菜","下饭","经典"],
+ ingredients:[{n:"鸡腿肉",a:"300g"},{n:"花生米",a:"50g"},{n:"干辣椒",a:"5根"},{n:"花椒",a:"半勺"},{n:"姜片",a:"3片"},{n:"葱白",a:"1根"},{n:"生抽",a:"2勺"},{n:"陈醋",a:"1勺"},{n:"白糖",a:"半勺"},{n:"淀粉",a:"1勺"}],
+ steps:["鸡腿肉切丁加生抽淀粉腌10分钟。","花生米油炸或干炒至酥脆。","调宫保汁：生抽+醋+糖+水+淀粉。","锅入油下花椒干辣椒爆香。","下姜片葱白下鸡丁滑炒变色。","倒入宫保汁快炒至浓稠。","出锅前撒花生米。"],
+ tip:"川菜中比较温和；糖醋比例1:1的微辣甜口；花生米必须酥脆。"},
+
+{id:852,name:"回锅肉",cat:"纯荤",sub:"猪肉",cuisine:"sichuan",icon:"🥓",time:30,tags:["川菜","下饭","经典"],
+ ingredients:[{n:"五花肉",a:"500g"},{n:"青蒜苗",a:"4根"},{n:"豆瓣酱",a:"2勺"},{n:"豆豉",a:"1勺"},{n:"姜片",a:"4片"},{n:"生抽",a:"1勺"},{n:"白糖",a:"半勺"}],
+ steps:["五花肉冷水加姜片煮20分钟至8成熟。","捞出冷却切薄片。","青蒜苗斜切段。","锅入油下五花肉煸出油。","加豆瓣酱豆豉炒出红油。","下姜片生抽糖翻炒。","加青蒜苗大火快炒30秒出锅。"],
+ tip:"川菜之王；五花肉先煮后炒最香；豆瓣酱用郫县。"},
+
+{id:853,name:"水煮牛肉",cat:"纯荤",sub:"牛肉",cuisine:"sichuan",icon:"🌶",time:40,tags:["川菜","下饭","重口"],
+ ingredients:[{n:"嫩牛肉",a:"400g"},{n:"豆芽",a:"200g"},{n:"莴笋",a:"1根"},{n:"豆瓣酱",a:"3勺"},{n:"干辣椒",a:"10根"},{n:"花椒",a:"1勺"},{n:"姜蒜末",a:"适量"},{n:"小苏打",a:"一小撮"},{n:"淀粉",a:"1勺"},{n:"高汤",a:"500ml"}],
+ steps:["牛肉逆纹切薄片加小苏打淀粉腌20分钟。","豆芽莴笋焯水垫盆底。","锅入油下豆瓣酱姜蒜炒出红油。","加高汤煮开。","下牛肉煮2分钟立刻倒入盆中。","撒干辣椒花椒。","另起锅烧热油淋在牛肉上。"],
+ tip:"川菜代表作；牛肉嫩滑关键在小苏打+逆纹切；最后淋油激香。"},
+
+{id:854,name:"夫妻肺片",cat:"凉菜",sub:"凉拌",cuisine:"sichuan",icon:"🌶",time:60,tags:["川菜","凉菜","经典"],
+ ingredients:[{n:"卤牛肉",a:"200g"},{n:"卤牛肚",a:"100g"},{n:"花生碎",a:"30g"},{n:"红油",a:"3勺"},{n:"花椒粉",a:"半勺"},{n:"生抽",a:"2勺"},{n:"陈醋",a:"1勺"},{n:"糖",a:"半勺"},{n:"芝麻",a:"少许"},{n:"芹菜碎",a:"少许"}],
+ steps:["卤牛肉卤牛肚切薄片摆盘。","调料汁：红油+花椒粉+生抽+醋+糖。","料汁淋肉片。","撒花生碎芝麻芹菜碎。"],
+ tip:"成都名小吃；红油是关键，可买现成；牛肉牛肚要切薄。"},
+
+{id:855,name:"担担面",cat:"荤素",sub:"主食",cuisine:"sichuan",icon:"🍜",time:25,tags:["川菜","主食","经典"],
+ ingredients:[{n:"细面条",a:"300g"},{n:"猪肉糜",a:"200g"},{n:"芽菜(宜宾芽菜)",a:"50g"},{n:"花生碎",a:"30g"},{n:"红油",a:"3勺"},{n:"生抽",a:"2勺"},{n:"陈醋",a:"1勺"},{n:"花椒粉",a:"半勺"},{n:"小葱",a:"2根"}],
+ steps:["肉糜锅炒至酥香加芽菜炒匀。","调底料：红油+生抽+醋+花椒粉+芽菜肉沫。","面条煮熟过冷水。","面条加底料拌匀。","撒花生碎葱花。"],
+ tip:"四川名小吃；芽菜是灵魂，宜宾芽菜最正宗。"},
+
+{id:856,name:"鱼香茄子",cat:"纯素",sub:"根茎",cuisine:"sichuan",icon:"🍆",time:25,tags:["川菜","下饭"],
+ ingredients:[{n:"长茄子",a:"2根"},{n:"泡椒末",a:"2勺"},{n:"姜蒜末",a:"各1勺"},{n:"葱花",a:"少许"},{n:"白糖",a:"1勺"},{n:"陈醋",a:"1勺"},{n:"生抽",a:"1勺"},{n:"淀粉",a:"1勺"}],
+ steps:["茄子切条加盐腌10分钟挤水。","调鱼香汁：糖醋生抽水淀粉搅匀。","锅入多油下茄条炒软盛出。","余油下泡椒姜蒜炒出红油。","回入茄条，倒鱼香汁翻匀。","撒葱花起锅。"],
+ tip:"虽叫鱼香其实没鱼；糖醋比例1:1关键；茄子先盐腌少吸油。"},
+
+{id:857,name:"川北凉粉",cat:"凉菜",sub:"凉拌",cuisine:"sichuan",icon:"🌶",time:15,tags:["川菜","凉菜","快手"],
+ ingredients:[{n:"白凉粉",a:"500g"},{n:"红油",a:"3勺"},{n:"花椒粉",a:"半勺"},{n:"生抽",a:"2勺"},{n:"陈醋",a:"1勺"},{n:"糖",a:"少许"},{n:"姜蒜末",a:"适量"},{n:"芝麻",a:"少许"},{n:"葱花",a:"少许"}],
+ steps:["凉粉切条装盘。","调料汁：红油+花椒粉+生抽+醋+糖+姜蒜末。","料汁淋凉粉拌匀。","撒芝麻葱花。"],
+ tip:"川菜消暑名菜；凉粉口感Q弹；可加花生碎更香。"},
+
+{id:858,name:"辣子鸡",cat:"纯荤",sub:"禽类",cuisine:"sichuan",icon:"🌶",time:30,tags:["川菜","下饭","重口"],
+ ingredients:[{n:"鸡腿肉",a:"500g"},{n:"干辣椒",a:"100g"},{n:"花椒",a:"2勺"},{n:"姜蒜片",a:"适量"},{n:"白芝麻",a:"少许"},{n:"生抽",a:"2勺"},{n:"料酒",a:"2勺"},{n:"淀粉",a:"3勺"}],
+ steps:["鸡腿切块加生抽料酒腌20分钟。","裹淀粉。","锅入宽油六成热炸鸡块至金黄。","捞出复炸一次更酥。","锅留少油下干辣椒花椒姜蒜爆香。","下炸鸡块翻炒2分钟。","撒白芝麻。"],
+ tip:"重庆名菜；外酥内嫩；辣椒比鸡多是特色但可少放。"},
+
+{id:859,name:"麻辣牛肉",cat:"凉菜",sub:"凉拌",cuisine:"sichuan",icon:"🥩",time:30,tags:["川菜","凉菜","下饭"],
+ ingredients:[{n:"卤牛肉",a:"400g"},{n:"红油",a:"3勺"},{n:"花椒粉",a:"1勺"},{n:"生抽",a:"2勺"},{n:"糖",a:"少许"},{n:"姜蒜末",a:"适量"},{n:"白芝麻",a:"少许"},{n:"葱花",a:"少许"}],
+ steps:["卤牛肉切薄片。","调料汁：红油+花椒粉+生抽+糖+姜蒜。","料汁淋牛肉拌匀。","撒芝麻葱花。"],
+ tip:"下酒下饭神器；可用市售卤牛肉省事。"},
+
+{id:860,name:"红油抄手",cat:"荤素",sub:"主食",cuisine:"sichuan",icon:"🥟",time:30,tags:["川菜","主食","经典"],
+ ingredients:[{n:"馄饨皮",a:"30张"},{n:"猪肉糜",a:"200g"},{n:"姜末",a:"少许"},{n:"生抽",a:"1勺"},{n:"红油",a:"2勺"},{n:"花椒粉",a:"半勺"},{n:"陈醋",a:"半勺"},{n:"糖",a:"少许"},{n:"葱花",a:"少许"}],
+ steps:["肉糜加姜末生抽蛋清盐搅打。","包成抄手。","水开下抄手煮至浮起。","碗中调红油+花椒粉+生抽+醋+糖。","抄手捞入碗中拌匀。","撒葱花。"],
+ tip:"成都名小吃；红油是灵魂；可加芽菜花生碎更香。"},
+
+{id:861,name:"椒麻鸡",cat:"凉菜",sub:"凉拌",cuisine:"sichuan",icon:"🐓",time:60,tags:["川菜","凉菜","经典"],
+ ingredients:[{n:"三黄鸡",a:"半只"},{n:"花椒",a:"1勺"},{n:"小葱",a:"4根"},{n:"姜片",a:"3片"},{n:"生抽",a:"3勺"},{n:"陈醋",a:"1勺"},{n:"糖",a:"少许"},{n:"麻油",a:"1勺"},{n:"红油",a:"1勺"}],
+ steps:["鸡煮熟过冷水切块。","花椒小葱用刀剁成椒麻末。","加生抽醋糖麻油红油拌成椒麻汁。","料汁淋鸡块。"],
+ tip:"椒麻汁是灵魂；麻而不辣的川菜代表；花椒小葱要现剁现拌。"},
+
+{id:862,name:"干锅花菜",cat:"荤素",sub:"叶菜",cuisine:"sichuan",icon:"🥦",time:25,tags:["川菜","下饭"],
+ ingredients:[{n:"花菜",a:"500g"},{n:"五花肉",a:"100g"},{n:"干辣椒",a:"3根"},{n:"豆瓣酱",a:"1勺"},{n:"姜蒜片",a:"适量"},{n:"生抽",a:"1勺"}],
+ steps:["花菜掰小朵焯水。","五花肉切片。","锅入油下五花肉煸出油。","加干辣椒豆瓣酱姜蒜炒香。","下花菜大火翻炒5分钟。","调生抽出锅装干锅。"],
+ tip:"川菜干锅做法；花菜先焯水更易入味；五花肉提供油香。"},
+
+{id:863,name:"樟茶鸭",cat:"纯荤",sub:"禽类",cuisine:"sichuan",icon:"🦆",time:120,tags:["川菜","经典"],
+ ingredients:[{n:"半只鸭",a:"700g"},{n:"樟树叶",a:"10片"},{n:"茶叶",a:"30g"},{n:"花椒",a:"1勺"},{n:"姜片",a:"4片"},{n:"盐",a:"3勺"},{n:"料酒",a:"2勺"}],
+ steps:["鸭子用盐花椒抹匀腌2小时。","锅中放樟树叶茶叶花椒铺底。","架蒸格放鸭子。","盖盖中火熏15分钟（不放水）。","蒸笼水开蒸鸭40分钟。","油锅烧热复炸鸭至皮酥脆。"],
+ tip:"成都名菜；樟茶熏香是特色；需要专门的熏锅或铁锅。"},
+
+{id:864,name:"麻婆豆腐(正宗川菜版)",cat:"荤素",sub:"蛋豆",cuisine:"sichuan",icon:"🌶",time:25,tags:["川菜","下饭","经典"],
+ ingredients:[{n:"嫩豆腐",a:"1盒"},{n:"牛肉末",a:"150g"},{n:"郫县豆瓣酱",a:"2勺"},{n:"豆豉",a:"1勺"},{n:"花椒粉",a:"1勺"},{n:"姜蒜末",a:"适量"},{n:"水淀粉",a:"3勺"},{n:"蒜苗",a:"2根"},{n:"高汤",a:"1碗"}],
+ steps:["豆腐切块盐水浸泡。","锅入油下牛肉末炒酥。","加豆瓣酱豆豉小火炒出红油。","下姜蒜末加高汤。","下豆腐推匀小火煮3分钟。","分次淋水淀粉勾芡至浓稠。","撒花椒粉蒜苗。"],
+ tip:"陈麻婆做法：麻辣烫鲜香酥嫩7字诀；用牛肉末比猪肉末更正宗。"},
+
+{id:865,name:"东坡肘子",cat:"纯荤",sub:"猪肉",cuisine:"sichuan",icon:"🍖",time:180,tags:["川菜","下饭","经典"],
+ ingredients:[{n:"猪肘子",a:"1只 1500g"},{n:"葱姜",a:"适量"},{n:"八角桂皮香叶",a:"各少许"},{n:"冰糖",a:"30g"},{n:"生抽",a:"4勺"},{n:"老抽",a:"1勺"},{n:"米酒",a:"3勺"}],
+ steps:["肘子焯水洗净。","锅入冰糖炒糖色，下肘子上色。","加葱姜八角桂皮香叶。","加生抽老抽米酒和热水没过肘子。","大火烧开转砂锅小火炖2小时。","开盖大火收汁。"],
+ tip:"四川眉山名菜；炖足时间皮糯肉烂；汤汁拌饭一绝。"}
 ];
 
 /* =========================================================
@@ -2195,17 +2558,19 @@ function showRoomShareModal() {
 const STATE = {
   cuisine: 'all',
   catFilter: null,
-  numDishes: 3,             // 几个菜（不含汤和甜品）
-  numSoups: 1,              // 几个汤
-  wantDessert: false,       // 要不要糖水
+  numDishes: 3,
+  numSoups: 1,
+  wantDessert: false,
   preset: 'random',
   excludeFish: true,
   excludeGarlicScallion: true,
   excludeSweet: true,
   current: [],
   lockedIds: new Set(),
+  rejectedIds: new Set(),
   shop: [],
   history: [],
+  savedMenus: [],           // 导出过的菜单（用户主动保存）
   modalDish: null,
 };
 
@@ -2255,6 +2620,7 @@ function loadState() {
     const saved = JSON.parse(localStorage.getItem('chiSha_v1') || '{}');
     if (saved.shop) STATE.shop = saved.shop;
     if (saved.history) STATE.history = saved.history;
+    if (saved.savedMenus) STATE.savedMenus = saved.savedMenus;
     if (typeof saved.excludeFish === 'boolean') STATE.excludeFish = saved.excludeFish;
     if (typeof saved.excludeGarlicScallion === 'boolean') STATE.excludeGarlicScallion = saved.excludeGarlicScallion;
     if (typeof saved.excludeSweet === 'boolean') STATE.excludeSweet = saved.excludeSweet;
@@ -2359,8 +2725,8 @@ function showAiSettings() {
           <label style="font-size:12px;color:#5E5E5E;display:block;margin-bottom:4px;">尺寸</label>
           <select id="aiSize" style="width:100%;padding:10px 12px;border:1px solid #C7A769;border-radius:6px;font-size:13px;background:#fff;">
             <option ${AI_CONFIG.size==='256x256'?'selected':''}>256x256</option>
-            <option ${(AI_CONFIG.size==='512x512'||!AI_CONFIG.size)?'selected':''}>512x512</option>
-            <option ${AI_CONFIG.size==='1024x1024'?'selected':''}>1024x1024</option>
+            <option ${AI_CONFIG.size==='512x512'?'selected':''}>512x512</option>
+            <option ${(AI_CONFIG.size==='1024x1024'||!AI_CONFIG.size)?'selected':''}>1024x1024</option>
           </select>
         </div>
       </div>
@@ -2379,9 +2745,22 @@ function showAiSettings() {
 
       <div id="aiTestStatus" style="display:none;padding:14px;border-radius:8px;margin-bottom:14px;font-size:13px;line-height:1.7;word-break:break-word;"></div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
         <button onclick="saveAiSettingsFromInputs()" style="padding:13px;border:0;border-radius:8px;background:#1C1F2E;color:#D9B988;font-size:14px;font-weight:500;letter-spacing:1px;cursor:pointer;">💾 保存</button>
         <button onclick="testAndClose()" id="aiTestBtn" style="padding:13px;border:1px solid #B8956A;border-radius:8px;background:transparent;color:#B8956A;font-size:14px;font-weight:500;cursor:pointer;">🔌 测试连接</button>
+      </div>
+
+      <div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:12px;margin-bottom:10px;font-size:12px;color:#92400E;line-height:1.7;">
+        <strong>🎯 一键生成 + 冻结部署（推荐）：</strong><br>
+        步骤 1：点下方红色按钮，浏览器自动给全部 199 道菜生图（约 60 元 API 额度，1 小时）<br>
+        步骤 2：生完后点绿色「💾 导出无 Key 版」<br>
+        步骤 3：把下载的 HTML 上传到 GitHub 覆盖旧的<br>
+        ✅ 公开版**没有 API Key**，永远不会泄露
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr;gap:8px;">
+        <button onclick="batchGenerateAllImages()" style="padding:12px;border:0;border-radius:8px;background:linear-gradient(135deg,#DC2626,#EF4444);color:#fff;font-size:13px;font-weight:600;cursor:pointer;letter-spacing:1px;">🎨 ① 批量生成所有 199 道菜的图</button>
+        <button onclick="exportFrozenHtml()" style="padding:12px;border:0;border-radius:8px;background:linear-gradient(135deg,#16A34A,#22C55E);color:#fff;font-size:13px;font-weight:600;cursor:pointer;letter-spacing:1px;">💾 ② 导出无 Key 版 HTML（含所有图）</button>
       </div>
       <button onclick="closeAiSettings()" style="margin-top:8px;width:100%;padding:10px;border:1px solid #E8E3D5;border-radius:8px;background:transparent;color:#5E5E5E;font-size:12px;cursor:pointer;">取消</button>
     </div>
@@ -2515,11 +2894,80 @@ function showDeployGuide() {
 }
 function saveState() {
   localStorage.setItem('chiSha_v1', JSON.stringify({
-    shop: STATE.shop, history: STATE.history,
+    shop: STATE.shop,
+    history: STATE.history,
+    savedMenus: STATE.savedMenus,
     excludeFish: STATE.excludeFish,
     excludeGarlicScallion: STATE.excludeGarlicScallion,
     excludeSweet: STATE.excludeSweet
   }));
+}
+
+/* 保存当前菜单到历史（在导出图片成功后调用） */
+function addToSavedMenus() {
+  if (!STATE.current.length) return;
+  // 避免重复保存：如果 5 秒内已保存过同样的菜单，跳过
+  const ids = STATE.current.map(d => d.id).sort().join(',');
+  const last = STATE.savedMenus[0];
+  if (last && last.dishIds.slice().sort().join(',') === ids && (Date.now() - last.savedAt) < 5000) return;
+  const tomorrow = new Date(Date.now()+86400000);
+  STATE.savedMenus.unshift({
+    savedAt: Date.now(),
+    forDate: `${tomorrow.getMonth()+1}/${tomorrow.getDate()}`,
+    dishIds: STATE.current.map(d => d.id),
+    preset: STATE.preset
+  });
+  if (STATE.savedMenus.length > 30) STATE.savedMenus = STATE.savedMenus.slice(0, 30);
+  saveState();
+}
+
+/* 直接下载历史菜单（不替换当前菜单） */
+function downloadSavedMenuDirectly(idx) {
+  const menu = STATE.savedMenus[idx];
+  if (!menu) return;
+  const dishes = menu.dishIds.map(id => DISHES.find(d => d.id === id)).filter(Boolean);
+  if (!dishes.length) {
+    toast('菜单数据已失效');
+    return;
+  }
+  showExportPreview(dishes);
+}
+
+/* 重用历史菜单：替换 current + 锁定全部 */
+function loadSavedMenu(idx) {
+  const menu = STATE.savedMenus[idx];
+  if (!menu) return;
+  const dishes = menu.dishIds.map(id => DISHES.find(d => d.id === id)).filter(Boolean);
+  if (!dishes.length) {
+    toast('菜单数据已失效');
+    return;
+  }
+  STATE.current = dishes;
+  STATE.lockedIds = new Set(dishes.map(d => d.id));
+  STATE.rejectedIds.clear();
+  renderRec();
+  // 跳回首页
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-home').classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelector('.nav-item').classList.add('active');
+  window.scrollTo({top:0});
+  toast('✓ 已载入历史菜单，可直接导出');
+  pushStateToRoom();
+}
+
+function deleteSavedMenu(idx) {
+  if (!confirm('删除这个历史菜单？')) return;
+  STATE.savedMenus.splice(idx, 1);
+  saveState();
+  renderHistory();
+}
+
+function clearAllSavedMenus() {
+  if (!confirm('清空所有历史菜单？')) return;
+  STATE.savedMenus = [];
+  saveState();
+  renderHistory();
 }
 
 /* =========================================================
@@ -2600,6 +3048,7 @@ function applyPreset(pool, preset) {
   if (preset === 'fujian')  return pool.filter(d => d.cuisine === 'fujian');
   if (preset === 'hunan')   return pool.filter(d => d.cuisine === 'hunan');
   if (preset === 'chaoshan')return pool.filter(d => d.cuisine === 'chaoshan');
+  if (preset === 'sichuan') return pool.filter(d => d.cuisine === 'sichuan');
   if (preset === 'chef')    return pool.filter(d => d.cuisine === 'local');
   if (preset === 'kids')    return pool.filter(d => hasTag(d,'儿童')||hasTag(d,'营养均衡')||/番茄|玉米|蒸蛋|蛋炒|滑蛋|肉饼|牛肉饭|牛肉面|云吞|馄饨|饺子|玉米煎|蛋包|山药|胡萝卜|土豆|鸡腿|鸡翅|肉丸|椰汁|椰浆/.test(d.name));
   return pool;
@@ -2622,13 +3071,39 @@ function generateCombo() {
   pool = applyExclusions(pool);
   pool = pool.filter(d => !lockedIds.has(d.id));
 
-  const dishPool = pool.filter(d => d.cat !== '汤' && d.cat !== '甜品');
-  const soupPool = pool.filter(d => d.cat === '汤');
-  const dessertPool = pool.filter(d => d.cat === '甜品');
+  // 排除上一轮抽到但用户没勾选的（不感兴趣）
+  let dishPool = pool.filter(d => d.cat !== '汤' && d.cat !== '甜品' && !STATE.rejectedIds.has(d.id));
+  let soupPool = pool.filter(d => d.cat === '汤' && !STATE.rejectedIds.has(d.id));
+  let dessertPool = pool.filter(d => d.cat === '甜品' && !STATE.rejectedIds.has(d.id));
 
-  const newDishes = pick(dishPool, Math.max(0, numDish - lockedNonSoup.length));
-  const newSoups  = pick(soupPool, Math.max(0, numSoup - lockedSoup.length));
-  const newDessert = wantDessert ? pick(dessertPool, Math.max(0, 1 - lockedDessert.length)) : [];
+  // 智能分类清理：只清理 pool 不够的那个类别，不一次清空全部 rejected
+  const needDish = Math.max(0, numDish - lockedNonSoup.length);
+  const needSoup = Math.max(0, numSoup - lockedSoup.length);
+  const needDessert = wantDessert ? Math.max(0, 1 - lockedDessert.length) : 0;
+
+  if (dishPool.length < needDish) {
+    // 只清除菜类别的 rejected
+    const fullDishPool = pool.filter(d => d.cat !== '汤' && d.cat !== '甜品');
+    fullDishPool.forEach(d => STATE.rejectedIds.delete(d.id));
+    dishPool = fullDishPool;
+    toast('「菜」类已抽完一轮，重新允许');
+  }
+  if (soupPool.length < needSoup) {
+    // 只清除汤类别的 rejected
+    const fullSoupPool = pool.filter(d => d.cat === '汤');
+    fullSoupPool.forEach(d => STATE.rejectedIds.delete(d.id));
+    soupPool = fullSoupPool;
+    toast('「汤」类已抽完一轮，重新允许');
+  }
+  if (dessertPool.length < needDessert) {
+    const fullDessertPool = pool.filter(d => d.cat === '甜品');
+    fullDessertPool.forEach(d => STATE.rejectedIds.delete(d.id));
+    dessertPool = fullDessertPool;
+  }
+
+  const newDishes = pick(dishPool, needDish);
+  const newSoups  = pick(soupPool, needSoup);
+  const newDessert = wantDessert ? pick(dessertPool, needDessert) : [];
 
   const all = [
     ...lockedNonSoup, ...newDishes,
@@ -2641,7 +3116,15 @@ function generateCombo() {
   return all.sort((a,b) => (order[a.cat]||9) - (order[b.cat]||9));
 }
 
-function rerollAll() {
+function rerollAll(isUserReroll) {
+  // 用户主动重抽（点换一组）：把当前未勾选的菜标记为不感兴趣
+  if (isUserReroll && STATE.current.length > 0) {
+    STATE.current.forEach(d => {
+      if (!STATE.lockedIds.has(d.id)) {
+        STATE.rejectedIds.add(d.id);
+      }
+    });
+  }
   STATE.current = generateCombo();
   renderRec();
   const today = new Date().toLocaleDateString('zh-CN');
@@ -2660,7 +3143,7 @@ function onRerollClick() {
   if (allLocked) {
     exportTodayMenu();
   } else {
-    rerollAll();
+    rerollAll(true);  // 用户主动重抽 → 排除未勾选的菜
   }
 }
 
@@ -2707,36 +3190,68 @@ function renderRec() {
   document.getElementById('statDishes').textContent = STATE.current.length;
   document.getElementById('statIng').textContent = allIng.size;
   document.getElementById('statTime').textContent = totalT;
-  // 按钮状态切换
-  const btn = document.getElementById('rerollBtn');
+  // 按钮文字 + 状态
+  const rerollBtn = document.getElementById('rerollBtn');
+  const exportBtn = document.getElementById('exportBtn');
   const hint = document.getElementById('lockHint');
   const lockedCount = STATE.current.filter(d=>STATE.lockedIds.has(d.id)).length;
-  const allLocked = STATE.current.length>0 && lockedCount===STATE.current.length;
-  if (allLocked) {
-    btn.innerHTML = '📋 Export Today\'s Menu · 生成菜单文件';
-    btn.classList.add('export-mode');
-    hint.style.display = 'block';
-    hint.innerHTML = '✓ All Locked · 已全部锁定';
-  } else if (lockedCount > 0) {
-    btn.innerHTML = `↻ Re-roll Unlocked · 换其余 ${STATE.current.length - lockedCount} 道`;
-    btn.classList.remove('export-mode');
-    hint.style.display = 'block';
-    hint.innerHTML = `🔒 ${lockedCount}/${STATE.current.length} Locked · 已锁定`;
-  } else {
-    btn.innerHTML = '↻ Curate Again · 换一组搭配';
-    btn.classList.remove('export-mode');
-    hint.style.display = 'block';
-    hint.innerHTML = '— Tap pin to lock a dish · 点图钉锁定 —';
+  const total = STATE.current.length;
+  if (rerollBtn) {
+    if (lockedCount === 0) {
+      rerollBtn.innerHTML = '↻ 换一组';
+    } else if (lockedCount === total) {
+      rerollBtn.innerHTML = '✓ 全部已锁';
+      rerollBtn.style.opacity = '0.5';
+    } else {
+      rerollBtn.innerHTML = `↻ 换剩余 ${total - lockedCount} 道`;
+      rerollBtn.style.opacity = '1';
+    }
   }
+  if (exportBtn) {
+    if (lockedCount === 0) {
+      exportBtn.innerHTML = '📋 无可导出';
+      exportBtn.disabled = true;
+      exportBtn.style.opacity = '0.4';
+      exportBtn.style.cursor = 'not-allowed';
+    } else {
+      exportBtn.innerHTML = `📋 导出 ${lockedCount} 道菜`;
+      exportBtn.disabled = false;
+      exportBtn.style.opacity = '1';
+      exportBtn.style.cursor = 'pointer';
+    }
+  }
+  if (hint) {
+    hint.style.display = 'block';
+    const rejectedInfo = STATE.rejectedIds.size > 0 ? ` · <span onclick="resetRejected()" style="cursor:pointer;text-decoration:underline;opacity:.7;">${STATE.rejectedIds.size} 道已排除（点击重置）</span>` : '';
+    if (total === 0) {
+      hint.innerHTML = '— 还没有菜 —' + rejectedInfo;
+    } else if (lockedCount === 0) {
+      hint.innerHTML = '— 请点 📌 锁定要导出的菜 —' + rejectedInfo;
+    } else if (lockedCount === total) {
+      hint.innerHTML = `🔒 全部 ${total} 道已锁定` + rejectedInfo;
+    } else {
+      hint.innerHTML = `🔒 已锁 ${lockedCount}/${total} · 导出时只带锁定的` + rejectedInfo;
+    }
+  }
+}
+
+function resetRejected() {
+  STATE.rejectedIds.clear();
+  toast('✓ 已重置筛选，所有菜重新可抽');
+  renderRec();
 }
 
 /* =========================================================
  *  导出今日菜单 (打开预览 → 用户选择保存为图片/文本/打印)
  * ========================================================= */
 function exportTodayMenu() {
-  const dishes = STATE.current;
-  if (!dishes.length) { toast('还没有菜单'); return; }
-  showExportPreview(dishes);
+  // 只导出锁定的菜：没锁定就不让导出
+  const lockedDishes = STATE.current.filter(d => STATE.lockedIds.has(d.id));
+  if (!lockedDishes.length) {
+    toast('请先点 📌 锁定要导出的菜');
+    return;
+  }
+  showExportPreview(lockedDishes);
 }
 
 function showExportPreview(dishes) {
@@ -2763,10 +3278,12 @@ function showExportPreview(dishes) {
       <span>📋 菜单预览 · Menu Preview</span>
       <span style="cursor:pointer;font-size:22px;line-height:1;" onclick="closeExportPreview()">×</span>
     </div>
-    <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#666;padding:20px;">
-      <div id="menuImageTarget" style="background:#F2E4C0;max-width:680px;margin:0 auto;box-shadow:0 8px 32px rgba(0,0,0,.3);border:8px solid #8B2C2C;">
-        <div style="border:1px solid #FAEBC8;">
-          ${previewHTML}
+    <div style="flex:1;overflow:auto;-webkit-overflow-scrolling:touch;background:#666;padding:20px;text-align:center;">
+      <div style="display:inline-block;transform-origin:top center;" id="menuImageScaleWrapper">
+        <div id="menuImageTarget" style="background:#F2E4C0;width:720px;box-shadow:0 8px 32px rgba(0,0,0,.3);border:8px solid #8B2C2C;text-align:left;">
+          <div style="border:1px solid #FAEBC8;">
+            ${previewHTML}
+          </div>
         </div>
       </div>
     </div>
@@ -2781,6 +3298,18 @@ function showExportPreview(dishes) {
   `;
   document.body.appendChild(overlay);
   document.body.style.overflow = 'hidden';
+
+  // 移动端自动缩放预览（保持图片实际尺寸 720px，但视觉上适配屏幕）
+  setTimeout(() => {
+    const wrapper = document.getElementById('menuImageScaleWrapper');
+    if (!wrapper) return;
+    const containerWidth = wrapper.parentElement.clientWidth - 40;
+    const scale = Math.min(1, containerWidth / 720);
+    if (scale < 1) {
+      wrapper.style.transform = `scale(${scale})`;
+      wrapper.style.marginBottom = `-${(1 - scale) * wrapper.offsetHeight}px`;
+    }
+  }, 50);
 
   // 添加菜品到购物清单
   dishes.forEach(addDishToShop);
@@ -2827,14 +3356,36 @@ async function exportAsImage() {
       });
     }));
   }
+
+  // === 修复移动端变形：取消预览缩放 + 强制固定宽度 ===
+  const FIXED_WIDTH = 720;
+  const wrapper = document.getElementById('menuImageScaleWrapper');
+  const oldWrapperTransform = wrapper ? wrapper.style.transform : '';
+  const oldWrapperMargin = wrapper ? wrapper.style.marginBottom : '';
+  if (wrapper) {
+    wrapper.style.transform = 'none';
+    wrapper.style.marginBottom = '0';
+  }
+  const oldStyles = {
+    width: target.style.width,
+    minWidth: target.style.minWidth,
+    maxWidth: target.style.maxWidth
+  };
+  target.style.width = FIXED_WIDTH + 'px';
+  target.style.minWidth = FIXED_WIDTH + 'px';
+  target.style.maxWidth = FIXED_WIDTH + 'px';
+  await new Promise(r => setTimeout(r, 100));
+
   try {
     const canvas = await html2canvas(target, {
       scale: 2,
-      backgroundColor: '#FAF8F2',
+      backgroundColor: '#F2E4C0',
       useCORS: true,
       allowTaint: false,
       logging: false,
-      imageTimeout: 8000
+      imageTimeout: 8000,
+      windowWidth: FIXED_WIDTH + 100,
+      width: FIXED_WIDTH
     });
     canvas.toBlob(blob => {
       const tomorrow = new Date(Date.now()+86400000);
@@ -2847,9 +3398,18 @@ async function exportAsImage() {
       a.click();
       setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
       toast('✓ 图片已保存 · 可发微信');
+      addToSavedMenus();  // 自动加入历史菜单
     }, 'image/png');
   } catch (e) {
     toast('生成失败: ' + e.message);
+  } finally {
+    target.style.width = oldStyles.width;
+    target.style.minWidth = oldStyles.minWidth;
+    target.style.maxWidth = oldStyles.maxWidth;
+    if (wrapper) {
+      wrapper.style.transform = oldWrapperTransform;
+      wrapper.style.marginBottom = oldWrapperMargin;
+    }
   }
 }
 
@@ -2890,68 +3450,200 @@ function exportAsText() {
 
 /* ============ AI 图像生成配置 ============ */
 const AI_CONFIG = {
-  apiUrl: '',
-  apiKey: '',
-  model: 'dall-e-3',
-  size: '512x512',
+  apiUrl: 'https://api.maibao.chat/v1',
+  apiKey: 'sk-10OHrqZp2AtWgsciUgkfD74qUtoEbmIu6yn0bLz0aLmYmsMa',
+  model: 'gpt-image-2',
+  size: '1024x1024',
   imageCache: {} // {dishId: imageUrl or base64}
 };
 
 function loadAiConfig() {
   try {
-    const saved = JSON.parse(localStorage.getItem('aiConfig_v1') || '{}');
-    Object.assign(AI_CONFIG, saved);
+    const saved = JSON.parse(localStorage.getItem('aiConfig_v2') || '{}');
+    // 只从缓存加载图片缓存和用户改动过的尺寸；URL/Key/模型用硬编码默认值确保正确
+    if (saved.imageCache) AI_CONFIG.imageCache = saved.imageCache;
+    if (saved.size) AI_CONFIG.size = saved.size;
+    // 允许用户在设置面板临时改 URL/Key/模型并保存
+    if (saved.apiUrl) AI_CONFIG.apiUrl = saved.apiUrl;
+    if (saved.apiKey) AI_CONFIG.apiKey = saved.apiKey;
+    if (saved.model) AI_CONFIG.model = saved.model;
   } catch(e){}
 }
 function saveAiConfig() {
-  localStorage.setItem('aiConfig_v1', JSON.stringify(AI_CONFIG));
+  localStorage.setItem('aiConfig_v2', JSON.stringify(AI_CONFIG));
 }
 
 async function callImageApi(prompt) {
   if (!AI_CONFIG.apiUrl || !AI_CONFIG.apiKey) throw new Error('未配置API');
-  // 自动补全 URL 路径
   let url = AI_CONFIG.apiUrl.trim().replace(/\/$/, '');
   if (!url.endsWith('/images/generations')) {
     if (!url.endsWith('/v1')) url += '/v1';
     url += '/images/generations';
   }
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + AI_CONFIG.apiKey
-    },
-    body: JSON.stringify({
-      model: AI_CONFIG.model,
-      prompt: prompt,
-      n: 1,
-      size: AI_CONFIG.size
-    })
-  });
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error('API错误 ' + response.status + ': ' + errText.substring(0, 100));
+  // 60秒超时，避免单张图卡死
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000);
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + AI_CONFIG.apiKey
+      },
+      body: JSON.stringify({
+        model: AI_CONFIG.model,
+        prompt: prompt,
+        n: 1,
+        size: AI_CONFIG.size
+      })
+    });
+    clearTimeout(timeoutId);
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error('API错误 ' + response.status + ': ' + errText.substring(0, 100));
+    }
+    const data = await response.json();
+    const item = data.data?.[0];
+    if (!item) throw new Error('返回数据格式异常');
+    if (item.url) return item.url;
+    if (item.b64_json) return 'data:image/png;base64,' + item.b64_json;
+    throw new Error('未找到图片URL');
+  } catch (e) {
+    clearTimeout(timeoutId);
+    if (e.name === 'AbortError') throw new Error('API请求超时（>60秒），请检查网络或重试');
+    throw e;
   }
-  const data = await response.json();
-  const item = data.data?.[0];
-  if (!item) throw new Error('返回数据格式异常');
-  if (item.url) return item.url;
-  if (item.b64_json) return 'data:image/png;base64,' + item.b64_json;
-  throw new Error('未找到图片URL');
 }
 
+async function urlToBase64(url) {
+  if (url.startsWith('data:')) return url;
+  // 15秒超时，避免下载卡死整个批量进程
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  try {
+    const r = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    const blob = await r.blob();
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (e) {
+    clearTimeout(timeoutId);
+    console.warn('图片转base64失败，保留原URL', e);
+    return url; // 转换失败就保留原URL（外链）
+  }
+}
+
+window.LAST_API_ERROR = '';
 async function generateDishImage(d) {
   if (AI_CONFIG.imageCache[d.id]) return AI_CONFIG.imageCache[d.id];
   if (!AI_CONFIG.apiKey || !AI_CONFIG.apiUrl) return null;
   const prompt = `${d.name}, chinese cuisine, top view, on a white ceramic plate, professional food photography, soft natural light, appetizing, high detail, no text, no watermark`;
   try {
     const url = await callImageApi(prompt);
-    AI_CONFIG.imageCache[d.id] = url;
+    const base64 = await urlToBase64(url);
+    AI_CONFIG.imageCache[d.id] = base64;
     saveAiConfig();
-    return url;
+    return base64;
   } catch (e) {
+    window.LAST_API_ERROR = e.message;
     console.error('图片生成失败', d.name, e);
     return null;
+  }
+}
+
+window.BATCH_STOP = false;
+function stopBatchGen() { window.BATCH_STOP = true; }
+
+async function batchGenerateAllImages() {
+  if (!AI_CONFIG.apiKey || !AI_CONFIG.apiUrl) {
+    showInlineStatus('请先配置 API URL 和 Key', 'error');
+    return;
+  }
+  // 先做一次连接测试，失败就停止
+  showInlineStatus('正在测试 API 连接...', 'info');
+  try {
+    await callImageApi('a red apple, white background');
+  } catch (e) {
+    showInlineStatus(`<strong>测试失败，已停止：</strong><br>${e.message}<br><br><strong>常见原因：</strong><br>• 模型名 <code>${AI_CONFIG.model}</code> 不存在，试试 <code>dall-e-3</code> / <code>dall-e-2</code> / <code>gpt-image-1</code><br>• URL 错误，检查是否 <code>${AI_CONFIG.apiUrl}</code><br>• 账户余额不足`, 'error');
+    return;
+  }
+
+  const all = DISHES.filter(d => !AI_CONFIG.imageCache[d.id]);
+  if (all.length === 0) {
+    showInlineStatus('所有 ' + DISHES.length + ' 道菜的图都已生成完成！', 'success');
+    return;
+  }
+  const estCost = (all.length * 0.3).toFixed(1);
+  if (!confirm(`将批量生成 ${all.length} 道菜的图片（已有 ${DISHES.length - all.length} 张缓存）。\n\n预估消耗约 ${estCost} 元 API 额度，耗时约 ${Math.ceil(all.length * 8 / 60)} 分钟。\n\n生成期间请不要关闭页面。确认继续？`)) {
+    return;
+  }
+  window.BATCH_STOP = false;
+  let ok = 0, fail = 0;
+  for (let i = 0; i < all.length; i++) {
+    if (window.BATCH_STOP) {
+      showInlineStatus(`⏸ 已停止<br>成功 ${ok} 张 · 失败 ${fail} 张`, 'info');
+      return;
+    }
+    const d = all[i];
+    const errLine = window.LAST_API_ERROR ? `<br><small style="color:#991B1B;">上一次错误：${window.LAST_API_ERROR.substring(0,120)}</small>` : '';
+    showInlineStatus(`进度 ${i+1}/${all.length} · 正在生成「${d.name}」<br>已成功 ${ok} · 失败 ${fail}${errLine}<br><br><button onclick="stopBatchGen()" style="padding:4px 12px;font-size:11px;background:#DC2626;color:#fff;border:0;border-radius:4px;cursor:pointer;">⏸ 停止</button>`, 'info');
+    const result = await generateDishImage(d);
+    if (result) ok++; else fail++;
+    // 连续 5 张失败就自动停止
+    if (fail >= 5 && ok === 0) {
+      showInlineStatus(`<strong>已自动停止：连续失败 ${fail} 张</strong><br><br><strong>最后错误：</strong>${window.LAST_API_ERROR}<br><br><strong>建议：</strong><br>1. 点 ❌ 关闭 → 重新打开 ⚙️ AI 设置<br>2. 点 「🔌 测试连接」 看具体错误<br>3. 根据错误调整模型名或URL<br>4. 测试通过后再来批量生成`, 'error');
+      return;
+    }
+    await new Promise(r => setTimeout(r, 150)); // 缩短到150ms
+  }
+  showInlineStatus(`✅ 完成！成功 ${ok} 张 · 失败 ${fail} 张<br>${ok > 0 ? '<br>现在可以点「💾 导出无 Key 版」生成给 GitHub 用的安全版本' : ''}`, ok > 0 ? 'success' : 'error');
+}
+
+/* 把整个 HTML 冻结（嵌入所有图、删除 API Key），下载下来 */
+async function exportFrozenHtml() {
+  if (Object.keys(AI_CONFIG.imageCache).length === 0) {
+    if (!confirm('当前没有缓存图片，导出的 HTML 将不含菜品图。确认继续？')) return;
+  }
+  showInlineStatus('正在打包 HTML...', 'info');
+  try {
+    // 读取当前页面源代码
+    const response = await fetch(window.location.href);
+    const originalHtml = await response.text();
+
+    // 构造新的 AI_CONFIG 默认值（清空 Key/URL，嵌入图片缓存）
+    const cacheJson = JSON.stringify(AI_CONFIG.imageCache);
+    const newConfig = `const AI_CONFIG = {
+  apiUrl: '',
+  apiKey: '',
+  model: 'gpt-image-2',
+  size: '1024x1024',
+  imageCache: ${cacheJson}
+};`;
+
+    // 替换原 AI_CONFIG 段落
+    const frozen = originalHtml.replace(
+      /const AI_CONFIG = \{[\s\S]*?imageCache: \{\}[\s\S]*?\};/,
+      newConfig
+    );
+
+    // 下载
+    const blob = new Blob([frozen], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'index.html';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 1000);
+    const sizeMB = (frozen.length / 1024 / 1024).toFixed(1);
+    showInlineStatus(`✅ 已下载 index.html（${sizeMB} MB，含 ${Object.keys(AI_CONFIG.imageCache).length} 张图）<br><br>这个文件<strong>没有 API Key</strong>，可以放心上传到 GitHub Pages。`, 'success');
+  } catch (e) {
+    showInlineStatus('导出失败：' + e.message, 'error');
   }
 }
 
@@ -3539,27 +4231,36 @@ function openModalById(id) { openModal(dishById(id)); }
  * ========================================================= */
 function renderHistory() {
   const container = document.getElementById('historyContainer');
-  if (!STATE.history.length) {
-    container.innerHTML = `<div class="shop-empty"><div class="emoji">📒</div><p>还没有用餐记录</p></div>`;
+  if (!STATE.savedMenus.length) {
+    container.innerHTML = `<div class="shop-empty"><div class="emoji">📒</div><p>还没有保存的菜单</p><p style="font-size:12px;margin-top:6px;">每次导出图片后会自动保存，方便下次重用</p></div>`;
     return;
   }
-  let html = '';
-  STATE.history.forEach((h, idx) => {
-    const dishes = h.dishIds.map(id => dishById(id)).filter(Boolean);
+  let html = '<div style="padding:8px 16px 4px;font-size:11px;color:var(--text-mute);letter-spacing:1px;">👁 预览/下载 · ↻ 替换当前菜单 · 🗑 删除</div>';
+  STATE.savedMenus.forEach((menu, idx) => {
+    const dishes = menu.dishIds.map(id => dishById(id)).filter(Boolean);
+    const date = new Date(menu.savedAt);
+    const dateStr = `${date.getMonth()+1}/${date.getDate()} ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
+    const presetLabel = {random:'随机',light:'清爽',health:'三高',kids:'小朋友',jiangzhe:'江浙',canton:'广东',fujian:'福建',hunan:'湘菜',chaoshan:'潮汕',chef:'厨师'}[menu.preset] || menu.preset || '';
     html += `
-      <div class="history-item">
-        <div>
-          <div class="history-date">${h.date}</div>
-          <div class="history-dishes">${dishes.map(d=>d.name).join(' · ')}</div>
+      <div class="saved-menu-card">
+        <div class="smc-head">
+          <div>
+            <div class="smc-date">${dateStr}</div>
+            <div class="smc-meta">${dishes.length} 道菜${presetLabel ? ' · ' + presetLabel : ''}</div>
+          </div>
+          <div class="smc-actions">
+            <button class="smc-btn smc-preview" onclick="downloadSavedMenuDirectly(${idx})">👁 预览</button>
+            <button class="smc-btn smc-reuse" onclick="loadSavedMenu(${idx})">↻ 重用</button>
+            <button class="smc-btn smc-del" onclick="deleteSavedMenu(${idx})">🗑</button>
+          </div>
+        </div>
+        <div class="smc-dishes">
+          ${dishes.map(d => `<span class="smc-chip">${d.icon} ${d.name}</span>`).join('')}
         </div>
       </div>`;
   });
-  html += `<div class="history-clear" onclick="clearHistory()">清空历史</div>`;
+  html += `<div class="history-clear" onclick="clearAllSavedMenus()">清空所有历史菜单</div>`;
   container.innerHTML = html;
-}
-function clearHistory() {
-  if (!confirm('清空所有历史？')) return;
-  STATE.history = []; saveState(); renderHistory();
 }
 
 /* =========================================================
@@ -3585,8 +4286,8 @@ function bindCuisineTabs() {
       document.querySelectorAll('.preset-chip').forEach(c=>c.classList.remove('active'));
       chip.classList.add('active');
       STATE.preset = chip.dataset.preset;
-      // 解锁所有，因为偏好改变了
       STATE.lockedIds.clear();
+      STATE.rejectedIds.clear();  // 换偏好时重置不感兴趣列表
       rerollAll();
     };
   });
@@ -3599,7 +4300,8 @@ function bindCuisineTabs() {
         const v = parseInt(chip.dataset.v);
         if (key === 'wantDessert') STATE.wantDessert = (v === 1);
         else STATE[key] = v;
-        STATE.lockedIds.clear();
+        // 改菜数时不清空锁定，保留已勾选的菜
+        STATE.rejectedIds.clear();
         rerollAll();
       };
     });
